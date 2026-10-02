@@ -9,7 +9,7 @@ runs in its own agent process; watch CPU and memory as call volume grows (see "C
 
 ## 1. Prepare the server
 
-Use Ubuntu 24.04. Install Docker:
+Use Ubuntu 22.04 or 24.04. Install Docker:
 
 ```sh
 curl -fsSL https://get.docker.com | sh
