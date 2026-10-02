@@ -112,8 +112,11 @@ services:
       TELNYX_SIP_IPS: ${TELNYX_SIP_IPS:-}
       TWILIO_SIP_IPS: ${TWILIO_SIP_IPS:-}
 
+  # HTTPS for both domains. Skipped when COMPOSE_PROFILES in .env doesn't include "caddy",
+  # for servers where nginx already owns ports 80/443 (use nginx/voice-platform.conf instead).
   caddy:
     image: caddy:2-alpine
+    profiles: ["caddy"]
     restart: unless-stopped
     network_mode: host
     environment:

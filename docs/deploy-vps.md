@@ -56,6 +56,29 @@ docker compose logs -f agent    # wait for "registered worker"
 
 Open `https://app.yourdomain.com`, sign up, create an agent and press **Start test call**.
 
+## Server already runs nginx
+
+If nginx already listens on ports 80/443 (for example in front of n8n), keep it and skip Caddy:
+
+1. Delete the `COMPOSE_PROFILES=caddy` line from `infra/.env`, then start the stack as above.
+2. Add the site, with your domains in place of the examples:
+
+   ```sh
+   sed -e 's/app.example.com/app.yourdomain.com/' -e 's/livekit.example.com/livekit.yourdomain.com/' \
+     infra/nginx/voice-platform.conf | sudo tee /etc/nginx/sites-available/voice-platform.conf
+   sudo ln -s /etc/nginx/sites-available/voice-platform.conf /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+3. Add HTTPS with certbot (it edits the site and renews the certificates):
+
+   ```sh
+   sudo apt install -y certbot python3-certbot-nginx
+   sudo certbot --nginx -d app.yourdomain.com -d livekit.yourdomain.com
+   ```
+
+Call audio does not pass through nginx, so the UDP ports above must still be open.
+
 ## 4. Phone calls
 
 Follow [telephony.md](telephony.md) to point Telnyx and/or Twilio numbers at the server, then:
