@@ -14,6 +14,7 @@ import {
 import { requireSession } from "@/lib/auth";
 import { findProvider, LANGUAGES } from "@/lib/catalog";
 import { encrypt } from "@/lib/crypto";
+import { elevenLabsVoiceExists } from "@/lib/elevenlabs";
 import { sql } from "@/lib/db";
 import { isE164, isUuid } from "@/lib/validation";
 
@@ -78,6 +79,10 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
     if (!own) return { error: "Pick one of your connected calendars" };
   }
   if (a.tools.booking && !a.booking.integrationId) return { error: "Choose a calendar for booking, or turn booking off" };
+  const tts = a.providers.tts;
+  if (tts.provider === "elevenlabs" && tts.voice && !(await elevenLabsVoiceExists(tts.voice))) {
+    return { error: `ElevenLabs has no voice "${tts.voice}" in your account. Pick one from the Voice list, or add it in ElevenLabs › Voice Library › Add to My Voices.` };
+  }
 
   // Keep stored secrets the user didn't change.
   const previous = isUuid(id)

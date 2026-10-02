@@ -105,6 +105,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+      # Lists ElevenLabs voices in the agent editor and checks voice IDs on save.
+      ELEVEN_API_KEY: ${ELEVEN_API_KEY:-}
 
   agent:
     build: ../agent

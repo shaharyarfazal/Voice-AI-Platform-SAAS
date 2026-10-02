@@ -142,4 +142,6 @@ def build_llm(chain: list[dict]) -> llm.LLM:
 
 def build_tts(chain: list[dict], language: str) -> tts.TTS:
     items = _build("tts", chain, lambda c: _make_tts(c, language))
-    return items[0] if len(items) == 1 else tts.FallbackAdapter(items)
+    # Switch to the next voice on the first failure: retrying a broken voice (e.g. a wrong voice
+    # ID) left the caller in silence for several seconds per reply.
+    return items[0] if len(items) == 1 else tts.FallbackAdapter(items, max_retry_per_tts=0)

@@ -157,6 +157,7 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
             value={s.providers[role]}
             available={context.available[role]}
             language={s.language}
+            elevenlabsVoices={context.elevenlabsVoices}
             onChange={(v) => set("providers", { ...s.providers, [role]: v })}
           />
         ))}
@@ -278,18 +279,22 @@ function ProviderPicker({
   value,
   available,
   language,
+  elevenlabsVoices,
   onChange,
 }: {
   role: Role;
   value: { provider: string; model: string; voice?: string };
   available: string[];
   language: string;
+  elevenlabsVoices: EditorContext["elevenlabsVoices"];
   onChange: (v: { provider: string; model: string; voice?: string }) => void;
 }) {
   const options = providersFor(role);
   const current = options.find((o) => o.id === value.provider);
   const title = { llm: "AI model (LLM)", stt: "Speech recognition", tts: "Voice" }[role];
   const englishOnly = current && !current.multilingual && !language.startsWith("en");
+  const voiceList = role === "tts" && current?.id === "elevenlabs" ? elevenlabsVoices : null;
+  const knownVoice = voiceList?.find((v) => v.id === value.voice);
   return (
     <fieldset className="card space-y-4">
       <legend className="px-1 text-sm font-medium">{title}</legend>
@@ -317,7 +322,12 @@ function ProviderPicker({
         </Field>
         {role === "tts" && current?.id !== "deepgram" && (
           <Field label="Voice" htmlFor="tts-voice" hint={current?.voiceHint}>
-            <input className="input" id="tts-voice" value={value.voice ?? ""} onChange={(e) => onChange({ ...value, voice: e.target.value })} />
+            <input className="input" id="tts-voice" list={voiceList ? "tts-voices" : undefined} value={value.voice ?? ""} onChange={(e) => onChange({ ...value, voice: e.target.value.trim() })} />
+            {voiceList && (
+              <datalist id="tts-voices">
+                {voiceList.map((v) => <option key={v.id} value={v.id} label={`${v.name}${v.category ? ` (${v.category})` : ""}`} />)}
+              </datalist>
+            )}
           </Field>
         )}
       </div>
@@ -327,6 +337,11 @@ function ProviderPicker({
       {current?.streaming === false && (
         <p className="text-sm text-muted">This provider transcribes after the caller finishes speaking, so replies are slower. Prefer Deepgram or AssemblyAI for phone calls.</p>
       )}
+      {voiceList && value.voice && (knownVoice ? (
+        <p className="text-sm text-muted">Voice: {knownVoice.name}</p>
+      ) : (
+        <p className="text-sm text-critical">▲ <span className="text-foreground">This voice isn&apos;t in your ElevenLabs My Voices. If saving fails, pick one from the list, or add it in ElevenLabs › Voice Library › Add to My Voices.</span></p>
+      ))}
       {englishOnly && (
         <p className="text-sm text-critical">▲ <span className="text-foreground">This voice only speaks English; pick another for {language}.</span></p>
       )}

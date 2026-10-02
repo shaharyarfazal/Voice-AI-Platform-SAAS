@@ -39,4 +39,6 @@ export type EditorContext = {
   /** Providers with API keys on the agent worker. */
   available: { stt: string[]; llm: string[]; tts: string[] };
   timezones: string[];
+  /** Voices in the platform's ElevenLabs account; null when unknown. */
+  elevenlabsVoices: { id: string; name: string; category: string }[] | null;
 };
