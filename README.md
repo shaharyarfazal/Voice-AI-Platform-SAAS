@@ -76,6 +76,13 @@ Unit tests: `cd web && npm test`.
   Only public https addresses are allowed; credentials are stored encrypted.
 - **Guardrails:** allowed topics, forbidden topics, blocked words, maximum call length, silence
   timeout. Platform-wide rules (no prompt leaks, no made-up facts, emergencies to 911/112) always apply.
+- **Call audio:** "noisy places" mode (stricter voice detection, a few words needed to interrupt,
+  and AssemblyAI voice isolation when AssemblyAI is the speech recognizer) and response speed
+  (how long a pause ends the caller's turn). Every call records its response time and where the
+  time went (pause detection, AI first word, voice first audio) on the call page.
+
+LiveKit's own noise and background-voice cancellation only works on LiveKit Cloud; on a
+self-hosted server it reports "not authorized" and passes audio through unchanged.
 
 ## Admin panel
 

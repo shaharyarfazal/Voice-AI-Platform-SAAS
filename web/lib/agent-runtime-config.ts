@@ -22,6 +22,7 @@ function guardrailPrompt(row: FullAgentRow, settings: PlatformSettings): string 
     "Never make up facts, prices, availability or policies. If it isn't in your instructions or a tool result, say you don't know and offer to take a message or transfer the call.",
     "Speak in short, natural sentences: one or two at a time. No lists, markdown, links, emojis or code.",
     "Don't give medical, legal or financial advice beyond the business information you were given.",
+    "The caller may be somewhere noisy, with other people talking nearby. Only respond to the caller. If what you heard is garbled, unrelated, or sounds like someone else's conversation, don't act on it: briefly ask the caller to repeat.",
     settings.safetyInstructions,
     g.allowedTopics && `Only help with: ${g.allowedTopics}. Politely decline anything else and steer back to what you can help with.`,
     g.forbidden && `Never do or discuss the following: ${g.forbidden}`,
@@ -104,6 +105,7 @@ export async function buildRuntimeConfig(row: FullAgentRow) {
       })),
       mcp: tools.mcp.map((m) => ({ name: m.name, url: m.url, allowedTools: m.allowedTools, authorization: secret(m.authorizationEnc) })),
     },
+    audio: { noiseProfile: guardrails.noiseProfile, responseSpeed: guardrails.responseSpeed },
     guardrails: {
       maxCallSeconds: guardrails.maxCallMinutes * 60,
       silenceTimeoutSeconds: guardrails.silenceTimeoutSeconds,

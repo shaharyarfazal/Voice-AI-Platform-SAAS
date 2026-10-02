@@ -19,3 +19,8 @@ test("a primary without an API key falls back to the first available provider", 
   const chain = providerChain("stt", { provider: "assemblyai", model: "x" }, ["deepgram"], "en-US");
   assert.deepEqual(chain.map((c) => c.provider), ["deepgram"]);
 });
+
+test("non-streaming speech-to-text is never added as an automatic fallback", () => {
+  const chain = providerChain("stt", { provider: "deepgram", model: "nova-3" }, ["deepgram", "openai", "assemblyai"], "en-US");
+  assert.deepEqual(chain.map((c) => c.provider), ["deepgram", "assemblyai"]);
+});

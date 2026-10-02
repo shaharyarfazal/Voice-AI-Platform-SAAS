@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { latencyLabel } from "@/components/latency";
 import { requireAdmin } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { formatDateTime, formatDuration, formatMoney } from "@/lib/format";
@@ -18,7 +19,7 @@ export default async function AdminCallsPage({ searchParams }: PageProps<"/admin
   const [tenants, calls] = await Promise.all([
     sql`SELECT id, name FROM tenants ORDER BY name`,
     sql`
-      SELECT c.id, c.started_at, c.channel, c.from_number, c.duration_seconds, c.outcome,
+      SELECT c.id, c.started_at, c.channel, c.from_number, c.duration_seconds, c.outcome, c.latency,
              t.name AS tenant_name, a.name AS agent_name, (${callCostSql(rates)})::float AS cost
       FROM calls c JOIN tenants t ON t.id = c.tenant_id LEFT JOIN agents a ON a.id = c.agent_id
       WHERE (${tenant}::uuid IS NULL OR c.tenant_id = ${tenant})
@@ -57,7 +58,7 @@ export default async function AdminCallsPage({ searchParams }: PageProps<"/admin
         <div className="card overflow-x-auto p-0">
           <table className="table">
             <thead>
-              <tr><th className="pl-4">When</th><th>Client</th><th>Agent</th><th>Channel</th><th>From</th><th>Duration</th><th>Outcome</th><th>Est. cost</th></tr>
+              <tr><th className="pl-4">When</th><th>Client</th><th>Agent</th><th>Channel</th><th>From</th><th>Duration</th><th>Outcome</th><th>Response</th><th>Est. cost</th></tr>
             </thead>
             <tbody>
               {calls.slice(0, PAGE_SIZE).map((c) => (
@@ -69,6 +70,7 @@ export default async function AdminCallsPage({ searchParams }: PageProps<"/admin
                   <td>{c.from_number ?? "—"}</td>
                   <td className="tabular-nums">{formatDuration(c.duration_seconds)}</td>
                   <td>{c.outcome.replaceAll("_", " ")}</td>
+                  <td className="tabular-nums">{latencyLabel(c.latency)}</td>
                   <td className="tabular-nums">{formatMoney(c.cost)}</td>
                 </tr>
               ))}

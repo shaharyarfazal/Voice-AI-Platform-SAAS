@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { LatencyStrip } from "@/components/latency";
 import { Transcript } from "@/components/transcript";
 import { requireAdmin } from "@/lib/auth";
 import { sql } from "@/lib/db";
@@ -45,6 +46,7 @@ export default async function AdminCallPage({ params }: PageProps<"/admin/calls/
           </div>
         ))}
       </div>
+      <LatencyStrip latency={call.latency} />
       <Transcript turns={transcript} purged={Boolean(call.transcript_purged_at)} />
     </div>
   );

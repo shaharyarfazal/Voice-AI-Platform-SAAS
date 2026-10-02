@@ -145,6 +145,13 @@ const MIGRATIONS: { id: string; sql: string }[] = [
       ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
     `,
   },
+  {
+    id: "0004_call_latency",
+    sql: `
+      -- Response time per call: average/p90 from caller stops speaking to agent starts, plus parts.
+      ALTER TABLE calls ADD COLUMN IF NOT EXISTS latency jsonb NOT NULL DEFAULT '{}';
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {

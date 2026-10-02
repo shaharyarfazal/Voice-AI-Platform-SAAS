@@ -24,7 +24,14 @@ function AgentStatus() {
 
 /** Talk to the agent from the browser; the same agent code answers phone calls. */
 export function TestCall({ agentId }: { agentId: string }) {
-  const [room] = useState(() => new Room({ adaptiveStream: true }));
+  const [room] = useState(
+    () =>
+      new Room({
+        adaptiveStream: true,
+        // Browser-side cleanup before audio leaves the device. voiceIsolation is stronger where supported.
+        audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, voiceIsolation: true },
+      }),
+  );
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

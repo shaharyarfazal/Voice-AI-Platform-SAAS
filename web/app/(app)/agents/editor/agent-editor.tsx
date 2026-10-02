@@ -163,6 +163,49 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
         <p className="rounded-lg bg-surface p-3 text-sm text-muted">
           Automatic fallback: if your chosen provider fails during a call, the agent switches to the next provider with an API key and keeps talking.
         </p>
+
+        <fieldset className="card space-y-4">
+          <legend className="px-1 text-sm font-medium">Call audio</legend>
+          <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Caller surroundings">
+            {(
+              [
+                ["standard", "Quiet callers", "Offices, homes. Most responsive to short replies like \"yes\"."],
+                ["noisy", "Noisy places", "Reception desks, streets, restaurants, cars. Ignores quieter background voices and noise, and needs a few words before the caller can interrupt."],
+              ] as const
+            ).map(([value, title, body]) => (
+              <label key={value} className={`toggle-row ${s.guardrails.noiseProfile === value ? "border-accent" : ""}`}>
+                <input
+                  type="radio"
+                  name="noiseProfile"
+                  className="mt-1 accent-[var(--accent)]"
+                  checked={s.guardrails.noiseProfile === value}
+                  onChange={() => setGuard({ noiseProfile: value })}
+                />
+                <span>
+                  <span className="block text-sm font-medium">{title}</span>
+                  <span className="mt-0.5 block text-sm text-muted">{body}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {s.guardrails.noiseProfile === "noisy" && s.providers.stt.provider !== "assemblyai" && (
+            <p className="hint">
+              For the strongest background-voice filtering, choose AssemblyAI for speech recognition: in noisy mode it isolates the voice closest to the phone.
+            </p>
+          )}
+          <Field label="Response speed" htmlFor="responseSpeed" hint="How long a pause means the caller has finished. Faster replies sooner but may cut off people who pause mid-sentence.">
+            <select
+              className="input max-w-sm"
+              id="responseSpeed"
+              value={s.guardrails.responseSpeed}
+              onChange={(e) => setGuard({ responseSpeed: e.target.value as EditorState["guardrails"]["responseSpeed"] })}
+            >
+              <option value="fast">Fast (0.3 s pause)</option>
+              <option value="balanced">Balanced (0.5 s pause)</option>
+              <option value="patient">Patient (0.9 s pause): for elderly callers or slow speakers</option>
+            </select>
+          </Field>
+        </fieldset>
       </section>
 
       {/* Tools */}
@@ -280,6 +323,9 @@ function ProviderPicker({
       </div>
       {!available.includes(value.provider) && (
         <p className="text-sm text-critical">▲ <span className="text-foreground">No API key for this provider on the server, so the first available one is used instead.</span></p>
+      )}
+      {current?.streaming === false && (
+        <p className="text-sm text-muted">This provider transcribes after the caller finishes speaking, so replies are slower. Prefer Deepgram or AssemblyAI for phone calls.</p>
       )}
       {englishOnly && (
         <p className="text-sm text-critical">▲ <span className="text-foreground">This voice only speaks English; pick another for {language}.</span></p>

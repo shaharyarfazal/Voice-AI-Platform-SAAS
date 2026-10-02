@@ -20,6 +20,18 @@ const CallReport = z.object({
       ttsCharacters: z.number().int().nonnegative(),
     })
     .optional(),
+  latency: z
+    .object({
+      replies: z.number().int().nonnegative(),
+      avgMs: z.number().nullable(),
+      p90Ms: z.number().nullable(),
+      endOfTurnMs: z.number().nullable(),
+      transcriptionMs: z.number().nullable(),
+      llmFirstTokenMs: z.number().nullable(),
+      ttsFirstAudioMs: z.number().nullable(),
+    })
+    .partial()
+    .optional(),
 });
 
 // Called by the agent worker when a call ends. Idempotent on room name.
@@ -39,11 +51,12 @@ export async function POST(request: Request) {
   const inserted = await sql`
     INSERT INTO calls (tenant_id, agent_id, room_name, channel, from_number, to_number,
                        started_at, ended_at, duration_seconds, outcome, transcript,
-                       stt_seconds, llm_input_tokens, llm_output_tokens, tts_characters)
+                       stt_seconds, llm_input_tokens, llm_output_tokens, tts_characters, latency)
     SELECT a.tenant_id, a.id, ${call.roomName}, ${call.channel}, ${call.fromNumber ?? null},
            ${call.toNumber ?? null}, ${call.startedAt}, ${call.endedAt}, ${durationSeconds},
            ${call.outcome}, ${sql.json(call.transcript)},
-           ${usage.sttSeconds}, ${usage.llmInputTokens}, ${usage.llmOutputTokens}, ${usage.ttsCharacters}
+           ${usage.sttSeconds}, ${usage.llmInputTokens}, ${usage.llmOutputTokens}, ${usage.ttsCharacters},
+           ${sql.json(call.latency ?? {})}
     FROM agents a WHERE a.id = ${call.agentId}
     ON CONFLICT (room_name) DO NOTHING
     RETURNING id`;

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { LatencyStrip } from "@/components/latency";
 import { Transcript } from "@/components/transcript";
 import { requireSession } from "@/lib/auth";
 import { sql, type CallRow } from "@/lib/db";
@@ -24,6 +25,7 @@ export default async function CallPage({ params }: PageProps<"/calls/[id]">) {
           {call.from_number && ` · from ${call.from_number}`} · {call.outcome.replaceAll("_", " ")}
         </p>
       </div>
+      <LatencyStrip latency={call.latency} />
       <Transcript turns={call.transcript} purged={Boolean(call.transcript_purged_at)} />
     </div>
   );

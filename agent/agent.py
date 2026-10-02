@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import os
 import re
 from datetime import datetime, timezone
@@ -119,6 +120,48 @@ def phrase_filter(phrases: list[str]):
     return apply
 
 
+class LatencyTracker:
+    """Per-reply response time (caller stops speaking -> agent starts speaking) and its parts."""
+
+    PARTS = ("end_of_turn_delay", "transcription_delay", "llm_node_ttft", "tts_node_ttfb")
+
+    def __init__(self) -> None:
+        self._user_stopped: float | None = None
+        self.replies: list[float] = []
+        self.parts: dict[str, list[float]] = {p: [] for p in self.PARTS}
+
+    def observe(self, role: str, metrics: dict) -> None:
+        if role == "user":
+            self._user_stopped = metrics.get("stopped_speaking_at") or self._user_stopped
+            for p in ("end_of_turn_delay", "transcription_delay"):
+                if isinstance(metrics.get(p), (int, float)):
+                    self.parts[p].append(metrics[p])
+            return
+        started = metrics.get("started_speaking_at")
+        if started and self._user_stopped and 0 < started - self._user_stopped < 30:
+            self.replies.append(started - self._user_stopped)
+            self._user_stopped = None
+        for p in ("llm_node_ttft", "tts_node_ttfb"):
+            if isinstance(metrics.get(p), (int, float)):
+                self.parts[p].append(metrics[p])
+
+    def summary(self) -> dict:
+        def ms(values: list[float]) -> int | None:
+            return round(sum(values) / len(values) * 1000) if values else None
+
+        ordered = sorted(self.replies)
+        return {
+            "replies": len(ordered),
+            "avgMs": ms(ordered),
+            # Nearest rank: the reply below which 90% of replies fall.
+            "p90Ms": round(ordered[max(0, math.ceil(0.9 * len(ordered)) - 1)] * 1000) if ordered else None,
+            "endOfTurnMs": ms(self.parts["end_of_turn_delay"]),
+            "transcriptionMs": ms(self.parts["transcription_delay"]),
+            "llmFirstTokenMs": ms(self.parts["llm_node_ttft"]),
+            "ttsFirstAudioMs": ms(self.parts["tts_node_ttfb"]),
+        }
+
+
 class Receptionist(Agent):
     def __init__(self, *, instructions: str, tools: list, mcp_servers: list, blocked_phrases: list[str]) -> None:
         super().__init__(instructions=instructions, tools=tools, mcp_servers=mcp_servers or None)
@@ -130,8 +173,29 @@ class Receptionist(Agent):
         return Agent.default.tts_node(self, text, model_settings)
 
 
+# Audio profiles. "noisy" needs louder, longer speech to count as the caller talking, and more
+# than a short burst to interrupt the agent, so background voices and noise trigger less.
+AUDIO_PROFILES = {
+    "standard": {
+        "vad": {"activation_threshold": 0.5, "min_speech_duration": 0.05},
+        "interruption": {"min_duration": 0.5, "min_words": 1},
+    },
+    "noisy": {
+        "vad": {"activation_threshold": 0.7, "min_speech_duration": 0.2},
+        "interruption": {"min_duration": 0.9, "min_words": 3},
+    },
+}
+# Seconds of silence before the agent treats the caller's turn as finished.
+RESPONSE_SPEED = {
+    "fast": {"min_delay": 0.3, "max_delay": 2.0},
+    "balanced": {"min_delay": 0.5, "max_delay": 3.0},
+    "patient": {"min_delay": 0.9, "max_delay": 4.0},
+}
+
+
 def prewarm(proc: JobProcess) -> None:
-    proc.userdata["vad"] = silero.VAD.load()
+    for name, profile in AUDIO_PROFILES.items():
+        proc.userdata[f"vad_{name}"] = silero.VAD.load(**profile["vad"])
     # Tell the dashboard which providers have API keys, so it only offers those.
     try:
         httpx.post(
@@ -147,7 +211,14 @@ server = AgentServer(setup_fnc=prewarm)
 @server.rtc_session(agent_name=AGENT_NAME)
 async def entrypoint(ctx: JobContext) -> None:
     await ctx.connect()
-    caller = await ctx.wait_for_participant()
+    try:
+        # A dispatch can arrive after the caller already left (e.g. a client reconnecting to a
+        # finished call). Without a limit that job would wait forever and hold a call slot.
+        caller = await asyncio.wait_for(ctx.wait_for_participant(), timeout=30)
+    except asyncio.TimeoutError:
+        logger.warning("no caller joined room %s; ending the job", ctx.room.name)
+        ctx.shutdown(reason="no caller")
+        return
 
     # Browser test calls carry the agent id in the dispatch metadata; phone calls are routed
     # by the number that was dialled.
@@ -180,7 +251,10 @@ async def entrypoint(ctx: JobContext) -> None:
     providers = config.get("providers") or {}
     language = config.get("language") or "en-US"
     guardrails = config.get("guardrails") or {}
-    vad = ctx.proc.userdata["vad"]
+    audio = config.get("audio") or {}
+    noise_profile = audio.get("noiseProfile") if audio.get("noiseProfile") in AUDIO_PROFILES else "standard"
+    speed = audio.get("responseSpeed") if audio.get("responseSpeed") in RESPONSE_SPEED else "balanced"
+    vad = ctx.proc.userdata[f"vad_{noise_profile}"]
     # Agent configs from before provider chains name a single OpenAI model and Cartesia voice.
     stt_chain = providers.get("stt") or [{"provider": "deepgram", "model": "nova-3"}]
     llm_chain = providers.get("llm") or [{"provider": "openai", "model": config.get("llmModel") or "gpt-4.1-mini"}]
@@ -189,19 +263,28 @@ async def entrypoint(ctx: JobContext) -> None:
     session: AgentSession = AgentSession(
         userdata=userdata,
         vad=vad,
-        stt=build_stt(stt_chain, language, vad),
+        stt=build_stt(stt_chain, language, vad, isolate_voice=noise_profile == "noisy"),
         llm=build_llm(llm_chain),
         tts=build_tts(tts_chain, language),
-        turn_handling={"turn_detection": MultilingualModel()},
+        turn_handling={
+            "turn_detection": MultilingualModel(),
+            "endpointing": RESPONSE_SPEED[speed],
+            "interruption": AUDIO_PROFILES[noise_profile]["interruption"],
+            # Start the reply while the end of the caller's turn is still being confirmed.
+            "preemptive_generation": {"enabled": True},
+        },
         user_away_timeout=float(guardrails.get("silenceTimeoutSeconds") or 20),
         max_tool_steps=4,
     )
+
+    latency = LatencyTracker()
 
     @session.on("conversation_item_added")
     def _on_item(event) -> None:
         item = event.item
         if getattr(item, "type", None) == "message" and item.role in ("user", "assistant") and item.text_content:
             transcript.append({"role": item.role, "text": item.text_content, "at": _now()})
+            latency.observe(item.role, getattr(item, "metrics", None) or {})
 
     async def _on_shutdown(reason: str) -> None:
         logger.info("call ended", extra={"room": ctx.room.name, "reason": reason, "turns": len(transcript)})
@@ -219,6 +302,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 "outcome": userdata.get("outcome", "caller_hung_up"),
                 "transcript": transcript,
                 "usage": summarize_usage(session),
+                "latency": latency.summary(),
             },
         )
 

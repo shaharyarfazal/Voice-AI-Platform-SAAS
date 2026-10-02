@@ -79,7 +79,11 @@ export function LiveDashboard({ initial }: { initial: Metrics }) {
 
       <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Live calls now" value={m.liveCalls.length} />
-        <Stat label="Calls today" value={b.today.calls} sub={`${b.today.minutes} min · ${b.today.errors} failed`} />
+        <Stat
+          label="Calls today"
+          value={b.today.calls}
+          sub={`${b.today.minutes} min · ${b.today.errors} failed · ${b.today.avgLatencyMs == null ? "no response data" : `${(b.today.avgLatencyMs / 1000).toFixed(1)} s avg response`}`}
+        />
         <Stat label="Minutes this month" value={b.month.minutes.toLocaleString()} sub={`${b.month.calls} calls`} />
         <Stat label="Clients" value={b.tenants.active} sub={`${b.tenants.total - b.tenants.active} suspended`} />
       </section>

@@ -55,12 +55,14 @@ export type ProviderOption = {
   voiceHint?: string;
   /** False when the provider only handles English. */
   multilingual: boolean;
+  /** False for speech-to-text that transcribes whole utterances (slower); never used as a fallback. */
+  streaming?: boolean;
 };
 
 export const PROVIDERS: ProviderOption[] = [
   { id: "deepgram", role: "stt", label: "Deepgram", envKey: "DEEPGRAM_API_KEY", defaultModel: "nova-3", models: ["nova-3", "nova-2"], multilingual: true },
-  { id: "assemblyai", role: "stt", label: "AssemblyAI", envKey: "ASSEMBLYAI_API_KEY", defaultModel: "universal-streaming-multilingual", models: ["universal-streaming-multilingual", "universal-streaming-english"], multilingual: true },
-  { id: "openai", role: "stt", label: "OpenAI", envKey: "OPENAI_API_KEY", defaultModel: "gpt-4o-mini-transcribe", models: ["gpt-4o-mini-transcribe", "gpt-4o-transcribe"], multilingual: true },
+  { id: "assemblyai", role: "stt", label: "AssemblyAI", envKey: "ASSEMBLYAI_API_KEY", defaultModel: "universal-3-6-pro", models: ["universal-3-6-pro", "universal-streaming-multilingual", "universal-streaming-english"], multilingual: true },
+  { id: "openai", role: "stt", label: "OpenAI", envKey: "OPENAI_API_KEY", defaultModel: "gpt-4o-mini-transcribe", models: ["gpt-4o-mini-transcribe", "gpt-4o-transcribe"], multilingual: true, streaming: false },
 
   { id: "openai", role: "llm", label: "OpenAI", envKey: "OPENAI_API_KEY", defaultModel: "gpt-4.1-mini", models: ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini"], multilingual: true },
   { id: "anthropic", role: "llm", label: "Anthropic (Claude)", envKey: "ANTHROPIC_API_KEY", defaultModel: "claude-haiku-4-5", models: ["claude-haiku-4-5", "claude-sonnet-5-5", "claude-sonnet-4-6"], multilingual: true },
@@ -110,6 +112,7 @@ export function providerChain(role: Role, primary: ProviderChoice, available: st
   for (const p of PROVIDERS) {
     if (p.role !== role || p.id === primary.provider || !usable(p.id)) continue;
     if (p.id === "custom") continue; // the custom LLM is configured by env and appended by the worker
+    if (p.streaming === false) continue; // too slow to switch to mid-call
     chain.push({ provider: p.id, model: p.defaultModel, ...(role === "tts" ? { voice: p.defaultVoice ?? "" } : {}) });
   }
   // If the chosen provider has no key, the first available one leads.

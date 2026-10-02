@@ -182,7 +182,8 @@ export async function businessMetrics() {
   const cost = callCostSql(settings.rates);
   const [today] = await sql`
     SELECT count(*)::int AS calls, coalesce(sum(duration_seconds), 0)::int AS seconds,
-           count(*) FILTER (WHERE outcome = 'error')::int AS errors
+           count(*) FILTER (WHERE outcome = 'error')::int AS errors,
+           round(avg((latency->>'avgMs')::numeric))::int AS avg_latency_ms
     FROM calls c WHERE started_at >= date_trunc('day', now())`;
   const [month] = await sql`
     SELECT count(*)::int AS calls, coalesce(sum(c.duration_seconds), 0)::int AS seconds,
@@ -202,7 +203,7 @@ export async function businessMetrics() {
   const revenue = tenants.fees + month.usage_revenue;
   const totalCost = month.provider_cost + settings.rates.serverMonthly;
   return {
-    today: { calls: today.calls, minutes: Math.round(today.seconds / 60), errors: today.errors },
+    today: { calls: today.calls, minutes: Math.round(today.seconds / 60), errors: today.errors, avgLatencyMs: today.avg_latency_ms as number | null },
     month: {
       calls: month.calls,
       minutes: Math.round(month.seconds / 60),

@@ -49,6 +49,10 @@ export const GuardrailsSchema = z.object({
   silenceTimeoutSeconds: z.number().int().min(5).max(120).default(20),
   /** Words or phrases the agent must never say (checked before speaking). */
   blockedPhrases: z.array(z.string()).max(50).default([]),
+  /** "noisy" ignores quieter/background speech and needs more than a short burst to interrupt. */
+  noiseProfile: z.enum(["standard", "noisy"]).default("standard"),
+  /** How long a pause ends the caller's turn: fast 0.3s, balanced 0.5s, patient 0.9s. */
+  responseSpeed: z.enum(["fast", "balanced", "patient"]).default("balanced"),
 });
 export type Guardrails = z.infer<typeof GuardrailsSchema>;
 

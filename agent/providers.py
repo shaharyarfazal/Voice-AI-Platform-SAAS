@@ -47,16 +47,21 @@ def base_language(language: str) -> str:
     return language.split("-")[0]
 
 
-def _make_stt(choice: dict, language: str):
+def _make_stt(choice: dict, language: str, isolate_voice: bool = False):
     provider, model = choice["provider"], choice.get("model") or ""
     multi = language == "multi"
     if provider == "deepgram":
         # "multi" (code-switching) needs nova-3.
         return deepgram.STT(model="nova-3" if multi else (model or "nova-3"), language=language)
     if provider == "assemblyai":
-        if base_language(language) == "en" and not multi:
-            return assemblyai.STT(model=model or "universal-streaming-english")
-        return assemblyai.STT(model="universal-streaming-multilingual", language_detection=True)
+        # Universal-3 Pro is multilingual; a language code steers it. In noisy mode, voice focus
+        # suppresses speech that isn't close to the phone (background voices).
+        kwargs: dict = {"model": model or "universal-3-6-pro"}
+        if not multi:
+            kwargs["language_codes"] = base_language(language)
+        if isolate_voice and kwargs["model"] in ("u3-rt-pro", "universal-3-5-pro", "universal-3-6-pro"):
+            kwargs["voice_focus"] = "near-field"
+        return assemblyai.STT(**kwargs)
     if provider == "openai":
         if multi:
             return openai.STT(model=model or "gpt-4o-mini-transcribe", detect_language=True)
@@ -111,8 +116,8 @@ def _build(role: str, chain: list[dict], factory) -> list:
     return built
 
 
-def build_stt(chain: list[dict], language: str, vad) -> stt.STT:
-    items = _build("stt", chain, lambda c: _make_stt(c, language))
+def build_stt(chain: list[dict], language: str, vad, *, isolate_voice: bool = False) -> stt.STT:
+    items = _build("stt", chain, lambda c: _make_stt(c, language, isolate_voice))
     return items[0] if len(items) == 1 else stt.FallbackAdapter(items, vad=vad)
 
 
