@@ -24,3 +24,9 @@ test("non-streaming speech-to-text is never added as an automatic fallback", () 
   const chain = providerChain("stt", { provider: "deepgram", model: "nova-3" }, ["deepgram", "openai", "assemblyai"], "en-US");
   assert.deepEqual(chain.map((c) => c.provider), ["deepgram", "assemblyai"]);
 });
+
+test("ElevenLabs Scribe is a streaming speech-to-text fallback", () => {
+  const chain = providerChain("stt", { provider: "deepgram", model: "nova-3" }, ["deepgram", "elevenlabs", "openai"], "es");
+  assert.deepEqual(chain.map((c) => c.provider), ["deepgram", "elevenlabs"]);
+  assert.equal(chain[1].model, "scribe_v2_realtime");
+});

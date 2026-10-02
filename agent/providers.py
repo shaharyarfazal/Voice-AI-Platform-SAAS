@@ -17,7 +17,12 @@ from livekit.plugins import anthropic, assemblyai, cartesia, deepgram, elevenlab
 logger = logging.getLogger("voice-agent.providers")
 
 ENV_KEYS = {
-    "stt": {"deepgram": "DEEPGRAM_API_KEY", "assemblyai": "ASSEMBLYAI_API_KEY", "openai": "OPENAI_API_KEY"},
+    "stt": {
+        "deepgram": "DEEPGRAM_API_KEY",
+        "assemblyai": "ASSEMBLYAI_API_KEY",
+        "elevenlabs": "ELEVEN_API_KEY",
+        "openai": "OPENAI_API_KEY",
+    },
     "llm": {
         "openai": "OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
@@ -62,6 +67,11 @@ def _make_stt(choice: dict, language: str, isolate_voice: bool = False):
         if isolate_voice and kwargs["model"] in ("u3-rt-pro", "universal-3-5-pro", "universal-3-6-pro"):
             kwargs["voice_focus"] = "near-field"
         return assemblyai.STT(**kwargs)
+    if provider == "elevenlabs":
+        # Scribe v2 Realtime streams; the batch Scribe models would wait for whole utterances.
+        if multi:
+            return elevenlabs.STT(model="scribe_v2_realtime", include_language_detection=True)
+        return elevenlabs.STT(model=model or "scribe_v2_realtime", language_code=base_language(language))
     if provider == "openai":
         if multi:
             return openai.STT(model=model or "gpt-4o-mini-transcribe", detect_language=True)

@@ -68,7 +68,7 @@ Unit tests: `cd web && npm test`.
 ## What clients can configure per agent
 
 - **Voice & language:** 27 languages or multilingual auto-detect; the LLM (OpenAI, Claude, Gemini,
-  Groq), speech recognition (Deepgram, AssemblyAI, OpenAI) and voice (Cartesia, ElevenLabs,
+  Groq), speech recognition (Deepgram, AssemblyAI, ElevenLabs Scribe, OpenAI) and voice (Cartesia, ElevenLabs,
   OpenAI, Deepgram). Every other provider with an API key is an automatic fallback.
 - **Tools:** end call, transfer to a person, check availability and book appointments in a
   connected Google or Outlook calendar.

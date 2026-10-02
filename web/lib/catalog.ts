@@ -62,6 +62,7 @@ export type ProviderOption = {
 export const PROVIDERS: ProviderOption[] = [
   { id: "deepgram", role: "stt", label: "Deepgram", envKey: "DEEPGRAM_API_KEY", defaultModel: "nova-3", models: ["nova-3", "nova-2"], multilingual: true },
   { id: "assemblyai", role: "stt", label: "AssemblyAI", envKey: "ASSEMBLYAI_API_KEY", defaultModel: "universal-3-6-pro", models: ["universal-3-6-pro", "universal-streaming-multilingual", "universal-streaming-english"], multilingual: true },
+  { id: "elevenlabs", role: "stt", label: "ElevenLabs (Scribe)", envKey: "ELEVEN_API_KEY", defaultModel: "scribe_v2_realtime", models: ["scribe_v2_realtime"], multilingual: true },
   { id: "openai", role: "stt", label: "OpenAI", envKey: "OPENAI_API_KEY", defaultModel: "gpt-4o-mini-transcribe", models: ["gpt-4o-mini-transcribe", "gpt-4o-transcribe"], multilingual: true, streaming: false },
 
   { id: "openai", role: "llm", label: "OpenAI", envKey: "OPENAI_API_KEY", defaultModel: "gpt-4.1-mini", models: ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini"], multilingual: true },
