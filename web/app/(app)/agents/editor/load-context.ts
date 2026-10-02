@@ -1,0 +1,17 @@
+import "server-only";
+import { sql } from "@/lib/db";
+import { getWorkerCapabilities } from "@/lib/settings";
+import type { EditorContext } from "./types";
+
+export async function loadEditorContext(tenantId: string): Promise<EditorContext> {
+  const [integrations, caps] = await Promise.all([
+    sql<EditorContext["integrations"]>`
+      SELECT id, provider, account_email FROM integrations WHERE tenant_id = ${tenantId} ORDER BY created_at`,
+    getWorkerCapabilities(),
+  ]);
+  return {
+    integrations: [...integrations],
+    available: { stt: caps.stt, llm: caps.llm, tts: caps.tts },
+    timezones: Intl.supportedValuesOf("timeZone"),
+  };
+}

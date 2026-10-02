@@ -76,3 +76,18 @@ export function callCostSql(rates: ProviderRates) {
 export function ratesConfigured(rates: ProviderRates): boolean {
   return Object.values(rates).some((v) => v > 0);
 }
+
+export type WorkerCapabilities = { stt: string[]; llm: string[]; tts: string[]; reportedAt: string };
+
+export async function saveWorkerCapabilities(providers: Omit<WorkerCapabilities, "reportedAt">): Promise<void> {
+  const value = { ...providers, reportedAt: new Date().toISOString() };
+  await sql`
+    INSERT INTO platform_settings (key, value) VALUES ('worker', ${sql.json(value)})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`;
+}
+
+/** Providers with API keys on the agent worker. Before the worker first reports, assume the original three. */
+export async function getWorkerCapabilities(): Promise<WorkerCapabilities> {
+  const [row] = await sql<{ value: WorkerCapabilities }[]>`SELECT value FROM platform_settings WHERE key = 'worker'`;
+  return row?.value ?? { stt: ["deepgram"], llm: ["openai"], tts: ["cartesia"], reportedAt: "" };
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Transcript } from "@/components/transcript";
 import { requireAdmin } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { formatDateTime, formatDuration, formatMoney } from "@/lib/format";
@@ -44,19 +45,7 @@ export default async function AdminCallPage({ params }: PageProps<"/admin/calls/
           </div>
         ))}
       </div>
-      <div className="space-y-3">
-        {transcript.length === 0 && (
-          <p className="text-sm text-muted">{call.transcript_purged_at ? "Transcript deleted under the client's retention policy." : "No transcript."}</p>
-        )}
-        {transcript.map((turn, i) => (
-          <div key={i} className={turn.role === "assistant" ? "mr-12" : "ml-12 text-right"}>
-            <div className="text-xs text-muted">{turn.role === "assistant" ? "Agent" : "Caller"}</div>
-            <div className={`inline-block rounded-lg px-3 py-2 text-sm ${turn.role === "assistant" ? "bg-black/5 dark:bg-white/10" : "bg-blue-600 text-white"}`}>
-              {turn.text}
-            </div>
-          </div>
-        ))}
-      </div>
+      <Transcript turns={transcript} purged={Boolean(call.transcript_purged_at)} />
     </div>
   );
 }

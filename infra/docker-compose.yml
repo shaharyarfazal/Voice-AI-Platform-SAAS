@@ -98,6 +98,13 @@ services:
       LIVEKIT_HTTP_URL: http://127.0.0.1:7880
       SIP_HEALTH_URL: http://127.0.0.1:8091
       AGENT_HEALTH_URL: http://127.0.0.1:8081
+      # Google / Microsoft sign-in and calendar connections (docs/integrations.md).
+      APP_URL: https://${APP_DOMAIN}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
 
   agent:
     build: ../agent
@@ -112,9 +119,15 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
       WEB_API_URL: http://127.0.0.1:3000
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
-      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:?set DEEPGRAM_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY}
-      CARTESIA_API_KEY: ${CARTESIA_API_KEY:?set CARTESIA_API_KEY}
+      # AI providers: set any you have. Each agent picks one per role; the rest are fallbacks.
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CARTESIA_API_KEY: ${CARTESIA_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      ELEVEN_API_KEY: ${ELEVEN_API_KEY:-}
+      ASSEMBLYAI_API_KEY: ${ASSEMBLYAI_API_KEY:-}
       TELNYX_SIP_IPS: ${TELNYX_SIP_IPS:-}
       TWILIO_SIP_IPS: ${TWILIO_SIP_IPS:-}
       FALLBACK_LLM_BASE_URL: ${FALLBACK_LLM_BASE_URL:-}

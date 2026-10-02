@@ -1,9 +1,9 @@
 import { isInternalRequest } from "@/lib/auth";
-import { sql, type AgentRow } from "@/lib/db";
-import { getSettings } from "@/lib/settings";
+import { buildRuntimeConfig, type FullAgentRow } from "@/lib/agent-runtime-config";
+import { sql } from "@/lib/db";
 import { isUuid } from "@/lib/validation";
 
-type AgentWithTenant = AgentRow & {
+type AgentWithTenant = FullAgentRow & {
   announce_ai: boolean;
   tenant_status: string;
   monthly_minute_limit: number | null;
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const number = searchParams.get("number");
 
   const select = sql`
-    SELECT a.*, t.status AS tenant_status, t.monthly_minute_limit,
+    SELECT a.*, t.name AS tenant_name, t.status AS tenant_status, t.monthly_minute_limit,
       (SELECT coalesce(sum(duration_seconds), 0)::int / 60 FROM calls
         WHERE tenant_id = t.id AND started_at >= date_trunc('month', now())) AS minutes_this_month
     FROM agents a JOIN tenants t ON t.id = a.tenant_id`;
@@ -38,20 +38,5 @@ export async function GET(request: Request) {
     return new Response("Monthly minute limit reached", { status: 404 });
   }
 
-  const settings = await getSettings();
-  const greeting = agent.announce_ai && settings.disclosure ? `${settings.disclosure} ${agent.greeting}` : agent.greeting;
-  const systemPrompt = settings.safetyInstructions
-    ? `${agent.system_prompt}\n\nAlways follow these rules:\n${settings.safetyInstructions}`
-    : agent.system_prompt;
-
-  return Response.json({
-    id: agent.id,
-    greeting,
-    systemPrompt,
-    apologyMessage: settings.apologyMessage,
-    voiceId: agent.voice_id,
-    language: agent.language,
-    llmModel: agent.llm_model,
-    transferNumber: agent.transfer_number,
-  });
+  return Response.json(await buildRuntimeConfig(agent));
 }

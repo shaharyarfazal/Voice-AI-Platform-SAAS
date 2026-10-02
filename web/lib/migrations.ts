@@ -97,6 +97,54 @@ const MIGRATIONS: { id: string; sql: string }[] = [
       );
     `,
   },
+  {
+    id: "0003_tools_integrations_providers",
+    sql: `
+      -- Per-agent provider chains, tools and guardrails (JSON so new options don't need migrations).
+      ALTER TABLE agents
+        ADD COLUMN IF NOT EXISTS providers jsonb NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS tools jsonb NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS guardrails jsonb NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS booking jsonb NOT NULL DEFAULT '{}';
+
+      -- OAuth connections (Google, Microsoft). Tokens are encrypted by the app (lib/crypto.ts).
+      CREATE TABLE IF NOT EXISTS integrations (
+        id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id          uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        provider           text NOT NULL CHECK (provider IN ('google', 'microsoft')),
+        account_email      text NOT NULL,
+        access_token_enc   text NOT NULL,
+        refresh_token_enc  text,
+        expires_at         timestamptz NOT NULL,
+        scopes             text NOT NULL DEFAULT '',
+        status             text NOT NULL DEFAULT 'connected' CHECK (status IN ('connected', 'error')),
+        last_error         text,
+        created_at         timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (tenant_id, provider, account_email)
+      );
+
+      CREATE TABLE IF NOT EXISTS appointments (
+        id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id         uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        agent_id          uuid REFERENCES agents(id) ON DELETE SET NULL,
+        integration_id    uuid REFERENCES integrations(id) ON DELETE SET NULL,
+        room_name         text,
+        starts_at         timestamptz NOT NULL,
+        ends_at           timestamptz NOT NULL,
+        timezone          text NOT NULL,
+        customer_name     text NOT NULL,
+        customer_phone    text,
+        customer_email    text,
+        notes             text NOT NULL DEFAULT '',
+        external_event_id text,
+        created_at        timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS appointments_tenant_starts_idx ON appointments(tenant_id, starts_at DESC);
+
+      -- Users created through Google/Microsoft sign-in have no password.
+      ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {

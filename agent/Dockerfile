@@ -6,7 +6,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY agent.py setup_sip.py ./
+COPY *.py ./
 # Bake the VAD and turn-detector model weights into the image so calls don't wait on downloads.
 RUN python -m livekit.agents download-files
 

@@ -11,7 +11,7 @@ const CallReport = z.object({
   startedAt: z.iso.datetime({ offset: true }),
   endedAt: z.iso.datetime({ offset: true }),
   outcome: z.string().min(1),
-  transcript: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string(), at: z.string() })),
+  transcript: z.array(z.object({ role: z.enum(["user", "assistant", "tool"]), text: z.string(), at: z.string() })),
   usage: z
     .object({
       sttSeconds: z.number().nonnegative(),

@@ -4,14 +4,36 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { login, signup } from "./actions";
 
-type Props = { mode: "login" | "signup"; termsUrl?: string; privacyUrl?: string };
+type Props = {
+  mode: "login" | "signup";
+  termsUrl?: string;
+  privacyUrl?: string;
+  ssoProviders?: ("google" | "microsoft")[];
+  notice?: string;
+};
 
-export function AuthForm({ mode, termsUrl, privacyUrl }: Props) {
+const SSO_LABEL = { google: "Continue with Google", microsoft: "Continue with Microsoft" };
+
+export function AuthForm({ mode, termsUrl, privacyUrl, ssoProviders = [], notice }: Props) {
   const [state, action, pending] = useActionState(mode === "login" ? login : signup, undefined);
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-12">
       <h1 className="mb-6 text-2xl font-semibold">{mode === "login" ? "Sign in" : "Create your account"}</h1>
+      {notice && <p className="mb-4 rounded-lg border border-critical/40 bg-critical/5 p-3 text-sm">{notice}</p>}
+      {ssoProviders.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {ssoProviders.map((p) => (
+            <a key={p} href={`/api/oauth/${p}/start?purpose=login`} className="btn-secondary w-full gap-2">
+              <span aria-hidden className="font-semibold">{p === "google" ? "G" : "M"}</span>
+              {SSO_LABEL[p]}
+            </a>
+          ))}
+          <div className="flex items-center gap-3 pt-2 text-xs text-muted">
+            <span className="h-px flex-1 bg-border" />or with email<span className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+      )}
       <form action={action} className="space-y-4">
         {mode === "signup" && (
           <div>

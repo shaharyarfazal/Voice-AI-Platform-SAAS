@@ -33,6 +33,6 @@ export type CallRow = {
   ended_at: Date;
   duration_seconds: number;
   outcome: string;
-  transcript: { role: "user" | "assistant"; text: string; at: string }[];
+  transcript: { role: "user" | "assistant" | "tool"; text: string; at: string }[];
   transcript_purged_at: Date | null;
 };

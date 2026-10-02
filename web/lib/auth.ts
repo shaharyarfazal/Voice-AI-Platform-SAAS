@@ -18,7 +18,9 @@ export async function hashPassword(password: string): Promise<string> {
   return `${salt.toString("hex")}:${hash.toString("hex")}`;
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(password: string, stored: string | null): Promise<boolean> {
+  // Accounts created with Google/Microsoft sign-in have no password.
+  if (!stored) return false;
   const [saltHex, hashHex] = stored.split(":");
   if (!saltHex || !hashHex) return false;
   const expected = Buffer.from(hashHex, "hex");
