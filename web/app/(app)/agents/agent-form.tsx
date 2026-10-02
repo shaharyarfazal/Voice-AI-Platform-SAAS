@@ -74,6 +74,13 @@ export function AgentForm({ agent }: { agent?: AgentRow }) {
           />
         </div>
       </div>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" name="announceAi" defaultChecked={agent?.announce_ai ?? true} className="mt-1" />
+        <span>
+          Tell callers they are speaking to an AI and that the call may be transcribed, before the greeting.
+          <span className="block text-muted">Required in the EU and recommended everywhere. Turn off only if your greeting already says it.</span>
+        </span>
+      </label>
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       {state?.saved && <p className="text-sm text-green-600">Saved.</p>}
       <button className="btn" disabled={pending}>{agent ? "Save changes" : "Create agent"}</button>

@@ -2,7 +2,8 @@ import "server-only";
 import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { sql } from "./db";
 
 const scrypt = promisify(scryptCb) as (password: string, salt: Buffer, keylen: number) => Promise<Buffer>;
 
@@ -71,4 +72,31 @@ export function isInternalRequest(request: Request): boolean {
   const expected = Buffer.from(`Bearer ${process.env.INTERNAL_API_TOKEN}`);
   const actual = Buffer.from(header);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+export type AdminSession = Session & { email: string };
+
+function envAdminEmails(): string[] {
+  return (process.env.PLATFORM_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Platform owner check: users flagged in the database, or listed in PLATFORM_ADMIN_EMAILS. */
+export async function getAdminSession(): Promise<AdminSession | null> {
+  const session = await getSession();
+  if (!session) return null;
+  const [user] = await sql<{ email: string; is_platform_admin: boolean }[]>`
+    SELECT email, is_platform_admin FROM users WHERE id = ${session.userId}`;
+  if (!user) return null;
+  if (!user.is_platform_admin && !envAdminEmails().includes(user.email)) return null;
+  return { ...session, email: user.email };
+}
+
+/** For admin pages: anyone who isn't a platform admin gets a 404, so the panel stays hidden. */
+export async function requireAdmin(): Promise<AdminSession> {
+  const admin = await getAdminSession();
+  if (!admin) notFound();
+  return admin;
 }

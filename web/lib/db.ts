@@ -5,7 +5,7 @@ declare global {
 }
 
 // Reuse one pool across hot reloads in development.
-export const sql = globalThis.__sql ?? postgres(process.env.DATABASE_URL!, { max: 10 });
+export const sql = globalThis.__sql ?? postgres(process.env.DATABASE_URL!, { max: 10, onnotice: () => {} });
 if (process.env.NODE_ENV !== "production") globalThis.__sql = sql;
 
 export type AgentRow = {
@@ -18,6 +18,7 @@ export type AgentRow = {
   language: string;
   llm_model: string;
   transfer_number: string | null;
+  announce_ai: boolean;
 };
 
 export type CallRow = {
@@ -33,4 +34,5 @@ export type CallRow = {
   duration_seconds: number;
   outcome: string;
   transcript: { role: "user" | "assistant"; text: string; at: string }[];
+  transcript_purged_at: Date | null;
 };

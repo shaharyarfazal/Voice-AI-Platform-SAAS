@@ -19,7 +19,6 @@ services:
       - "127.0.0.1:15432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ../web/db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U voice -d voice"]
       interval: 5s
@@ -71,6 +70,7 @@ services:
           password: ${REDIS_PASSWORD}
         sip_port: 5060
         rtp_port: 10000-20000
+        health_port: 8091
         use_external_ip: true
         logging:
           level: info
@@ -92,6 +92,12 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
       NEXT_PUBLIC_LIVEKIT_URL: wss://${LIVEKIT_DOMAIN}
       ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
+      PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-}
+      # Used by the admin panel's health checks and live metrics.
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@127.0.0.1:16379
+      LIVEKIT_HTTP_URL: http://127.0.0.1:7880
+      SIP_HEALTH_URL: http://127.0.0.1:8091
+      AGENT_HEALTH_URL: http://127.0.0.1:8081
 
   agent:
     build: ../agent
@@ -111,6 +117,9 @@ services:
       CARTESIA_API_KEY: ${CARTESIA_API_KEY:?set CARTESIA_API_KEY}
       TELNYX_SIP_IPS: ${TELNYX_SIP_IPS:-}
       TWILIO_SIP_IPS: ${TWILIO_SIP_IPS:-}
+      FALLBACK_LLM_BASE_URL: ${FALLBACK_LLM_BASE_URL:-}
+      FALLBACK_LLM_API_KEY: ${FALLBACK_LLM_API_KEY:-}
+      FALLBACK_LLM_MODEL: ${FALLBACK_LLM_MODEL:-}
 
   # HTTPS for both domains. Skipped when COMPOSE_PROFILES in .env doesn't include "caddy",
   # for servers where nginx already owns ports 80/443 (use nginx/voice-platform.conf instead).

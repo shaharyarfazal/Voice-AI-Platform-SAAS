@@ -5,6 +5,11 @@
   --foreground: #171717;
   --muted: #6b7280;
   --border: #e5e7eb;
+  /* Chart tokens (dataviz reference palette: series slot 1, status good/critical). */
+  --series-1: #2a78d6;
+  --status-good: #0ca30c;
+  --status-critical: #d03b3b;
+  --grid: #e7e5e0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -13,6 +18,8 @@
     --foreground: #ededed;
     --muted: #9ca3af;
     --border: #27272a;
+    --series-1: #3987e5;
+    --grid: #2e2e2b;
   }
 }
 
@@ -21,6 +28,10 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-series-1: var(--series-1);
+  --color-good: var(--status-good);
+  --color-critical: var(--status-critical);
+  --color-grid: var(--grid);
 }
 
 body {

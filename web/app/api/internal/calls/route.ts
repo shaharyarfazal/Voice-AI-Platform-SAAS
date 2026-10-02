@@ -12,6 +12,14 @@ const CallReport = z.object({
   endedAt: z.iso.datetime({ offset: true }),
   outcome: z.string().min(1),
   transcript: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string(), at: z.string() })),
+  usage: z
+    .object({
+      sttSeconds: z.number().nonnegative(),
+      llmInputTokens: z.number().int().nonnegative(),
+      llmOutputTokens: z.number().int().nonnegative(),
+      ttsCharacters: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 
 // Called by the agent worker when a call ends. Idempotent on room name.
@@ -21,6 +29,7 @@ export async function POST(request: Request) {
   const parsed = CallReport.safeParse(await request.json());
   if (!parsed.success) return Response.json({ error: parsed.error.issues }, { status: 400 });
   const call = parsed.data;
+  const usage = call.usage ?? { sttSeconds: 0, llmInputTokens: 0, llmOutputTokens: 0, ttsCharacters: 0 };
 
   const durationSeconds = Math.max(
     0,
@@ -29,13 +38,16 @@ export async function POST(request: Request) {
 
   const inserted = await sql`
     INSERT INTO calls (tenant_id, agent_id, room_name, channel, from_number, to_number,
-                       started_at, ended_at, duration_seconds, outcome, transcript)
+                       started_at, ended_at, duration_seconds, outcome, transcript,
+                       stt_seconds, llm_input_tokens, llm_output_tokens, tts_characters)
     SELECT a.tenant_id, a.id, ${call.roomName}, ${call.channel}, ${call.fromNumber ?? null},
            ${call.toNumber ?? null}, ${call.startedAt}, ${call.endedAt}, ${durationSeconds},
-           ${call.outcome}, ${sql.json(call.transcript)}
+           ${call.outcome}, ${sql.json(call.transcript)},
+           ${usage.sttSeconds}, ${usage.llmInputTokens}, ${usage.llmOutputTokens}, ${usage.ttsCharacters}
     FROM agents a WHERE a.id = ${call.agentId}
     ON CONFLICT (room_name) DO NOTHING
     RETURNING id`;
 
+  await sql`DELETE FROM live_calls WHERE room_name = ${call.roomName}`;
   return Response.json({ id: inserted[0]?.id ?? null });
 }

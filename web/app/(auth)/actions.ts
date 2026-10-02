@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 
 export type AuthState = { error?: string } | undefined;
 
@@ -13,7 +14,11 @@ const Credentials = z.object({
 });
 
 export async function signup(_: AuthState, form: FormData): Promise<AuthState> {
-  if (process.env.ALLOW_SIGNUP === "false") return { error: "Sign-ups are closed. Contact us for an account." };
+  const settings = await getSettings();
+  if (!settings.allowSignup) return { error: "Sign-ups are closed. Contact us for an account." };
+  if ((settings.termsUrl || settings.privacyUrl) && form.get("terms") !== "on") {
+    return { error: "Please accept the terms to create an account." };
+  }
   const parsed = Credentials.extend({ company: z.string().trim().min(1, "Company name is required") }).safeParse(
     Object.fromEntries(form),
   );
@@ -24,10 +29,11 @@ export async function signup(_: AuthState, form: FormData): Promise<AuthState> {
   if (existing) return { error: "An account with this email already exists" };
 
   const passwordHash = await hashPassword(password);
+  const termsAcceptedAt = form.get("terms") === "on" ? new Date() : null;
   const [user] = await sql.begin(async (tx) => {
     const [tenant] = await tx`INSERT INTO tenants (name) VALUES (${company}) RETURNING id`;
-    return tx`INSERT INTO users (tenant_id, email, password_hash)
-              VALUES (${tenant.id}, ${email}, ${passwordHash}) RETURNING id, tenant_id`;
+    return tx`INSERT INTO users (tenant_id, email, password_hash, terms_accepted_at, last_login_at)
+              VALUES (${tenant.id}, ${email}, ${passwordHash}, ${termsAcceptedAt}, now()) RETURNING id, tenant_id`;
   });
 
   await createSession({ userId: user.id, tenantId: user.tenant_id });
@@ -43,6 +49,7 @@ export async function login(_: AuthState, form: FormData): Promise<AuthState> {
     return { error: "Invalid email or password" };
   }
 
+  await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
   await createSession({ userId: user.id, tenantId: user.tenant_id });
   redirect("/");
 }

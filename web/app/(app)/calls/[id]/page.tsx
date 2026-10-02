@@ -24,7 +24,11 @@ export default async function CallPage({ params }: PageProps<"/calls/[id]">) {
         </p>
       </div>
       <div className="space-y-3">
-        {call.transcript.length === 0 && <p className="text-sm text-muted">No transcript.</p>}
+        {call.transcript.length === 0 && (
+          <p className="text-sm text-muted">
+            {call.transcript_purged_at ? "Transcript deleted under the data retention policy." : "No transcript."}
+          </p>
+        )}
         {call.transcript.map((turn, i) => (
           <div key={i} className={turn.role === "assistant" ? "mr-12" : "ml-12 text-right"}>
             <div className="text-xs text-muted">{turn.role === "assistant" ? "Agent" : "Caller"}</div>

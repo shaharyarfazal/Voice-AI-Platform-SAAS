@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { login, signup } from "./actions";
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+type Props = { mode: "login" | "signup"; termsUrl?: string; privacyUrl?: string };
+
+export function AuthForm({ mode, termsUrl, privacyUrl }: Props) {
   const [state, action, pending] = useActionState(mode === "login" ? login : signup, undefined);
 
   return (
@@ -33,6 +35,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             required
           />
         </div>
+        {mode === "signup" && (termsUrl || privacyUrl) && (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="terms" required className="mt-1" />
+            <span>
+              I agree to the{" "}
+              {termsUrl && <a className="underline" href={termsUrl} target="_blank" rel="noreferrer">Terms of Service</a>}
+              {termsUrl && privacyUrl && " and "}
+              {privacyUrl && <a className="underline" href={privacyUrl} target="_blank" rel="noreferrer">Privacy Policy</a>}
+            </span>
+          </label>
+        )}
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
         <button className="btn w-full" disabled={pending}>
           {mode === "login" ? "Sign in" : "Create account"}

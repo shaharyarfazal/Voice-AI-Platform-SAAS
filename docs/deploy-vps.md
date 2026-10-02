@@ -89,6 +89,19 @@ docker compose run --rm agent python setup_sip.py
 
 Add each number on the **Phone numbers** page and pick the agent that answers it.
 
+## Admin panel
+
+Put your login email in `PLATFORM_ADMIN_EMAILS` in `infra/.env` and restart the dashboard
+(`docker compose up -d web`). An **Admin panel** link then appears in your dashboard, at
+`/admin`. Start in **Settings**: enter your provider prices so costs and margins are real.
+
+## Where the data lives
+
+Everything is in the Postgres container (`infra-postgres-1`), stored in the Docker volume
+`infra_postgres-data` on the server's disk. It is reachable only from the server itself
+(127.0.0.1:15432). Open a SQL shell with `docker compose exec postgres psql -U voice voice`.
+The tables are created and upgraded automatically when the dashboard starts.
+
 ## Updating
 
 ```sh
@@ -96,8 +109,7 @@ git pull && cd infra && docker compose up -d --build
 ```
 
 The agent drains live calls before it restarts (`stop_grace_period: 2m`).
-The database schema in `web/db/schema.sql` is applied only when the Postgres volume is first
-created; apply later schema changes by hand with `docker compose exec postgres psql -U voice voice`.
+Database changes are applied automatically when the dashboard restarts.
 
 ## Backups
 

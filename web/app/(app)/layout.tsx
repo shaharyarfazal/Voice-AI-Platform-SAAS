@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { getAdminSession, requireSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { logout } from "../(auth)/actions";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await requireSession();
-  const [tenant] = await sql`SELECT name FROM tenants WHERE id = ${session.tenantId}`;
+  const [[tenant], admin] = await Promise.all([
+    sql`SELECT name, status FROM tenants WHERE id = ${session.tenantId}`,
+    getAdminSession(),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -15,11 +18,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/agents" className="text-muted hover:text-foreground">Agents</Link>
           <Link href="/numbers" className="text-muted hover:text-foreground">Phone numbers</Link>
           <Link href="/calls" className="text-muted hover:text-foreground">Calls</Link>
-          <form action={logout} className="ml-auto">
+          {admin && <Link href="/admin" className="ml-auto font-medium text-blue-600">Admin panel</Link>}
+          <form action={logout} className={admin ? "" : "ml-auto"}>
             <button className="text-muted hover:text-foreground">Sign out</button>
           </form>
         </nav>
       </header>
+      {tenant?.status === "suspended" && (
+        <div className="bg-red-600 px-4 py-2 text-center text-sm text-white">
+          This account is suspended and calls are not being answered. Contact support to restore it.
+        </div>
+      )}
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
     </div>
   );
