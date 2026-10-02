@@ -1,0 +1,128 @@
+# Single-server stack for a VPS (tested layout for Contabo 6 vCPU / 12 GB).
+#
+# LiveKit, SIP, Caddy, the agent and the web app use the host network: WebRTC and SIP need real
+# UDP ports and the server's public IP, and Docker's port mapping of 20k UDP ports is slow.
+# Postgres and Redis are bound to 127.0.0.1 only.
+#
+# Usage:  cd infra && cp .env.example .env && (edit .env) && docker compose up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: voice
+      POSTGRES_USER: voice
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../web/db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voice -d voice"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [redis]
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        bind_addresses: ["127.0.0.1"]
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 60000
+          use_external_ip: true
+        redis:
+          address: 127.0.0.1:6379
+          password: ${REDIS_PASSWORD}
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+        logging:
+          level: info
+
+  sip:
+    image: livekit/sip:latest
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [livekit]
+    environment:
+      SIP_CONFIG_BODY: |
+        api_key: ${LIVEKIT_API_KEY}
+        api_secret: ${LIVEKIT_API_SECRET}
+        ws_url: ws://127.0.0.1:7880
+        redis:
+          address: 127.0.0.1:6379
+          password: ${REDIS_PASSWORD}
+        sip_port: 5060
+        rtp_port: 10000-20000
+        use_external_ip: true
+        logging:
+          level: info
+
+  web:
+    build: ../web
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      HOSTNAME: 127.0.0.1
+      DATABASE_URL: postgres://voice:${POSTGRES_PASSWORD}@127.0.0.1:5432/voice
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      NEXT_PUBLIC_LIVEKIT_URL: wss://${LIVEKIT_DOMAIN}
+      ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
+
+  agent:
+    build: ../agent
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [livekit, web]
+    # Each call runs in its own process; give the worker room to grow.
+    stop_grace_period: 2m
+    environment:
+      LIVEKIT_URL: ws://127.0.0.1:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      WEB_API_URL: http://127.0.0.1:3000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:?set DEEPGRAM_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY}
+      CARTESIA_API_KEY: ${CARTESIA_API_KEY:?set CARTESIA_API_KEY}
+      TELNYX_SIP_IPS: ${TELNYX_SIP_IPS:-}
+      TWILIO_SIP_IPS: ${TWILIO_SIP_IPS:-}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?set APP_DOMAIN}
+      LIVEKIT_DOMAIN: ${LIVEKIT_DOMAIN:?set LIVEKIT_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:

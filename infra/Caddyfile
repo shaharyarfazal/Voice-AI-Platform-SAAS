@@ -1,0 +1,10 @@
+# Caddy gets and renews HTTPS certificates automatically for both domains.
+{$APP_DOMAIN} {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+}
+
+# Browser test calls connect here over secure WebSocket; media then flows over UDP 50000-60000.
+{$LIVEKIT_DOMAIN} {
+	reverse_proxy 127.0.0.1:7880
+}
