@@ -66,6 +66,7 @@ type CallRecord = {
   agent_id: string | null;
   agent_name: string | null;
   channel: "phone" | "web";
+  direction: "inbound" | "outbound" | "web";
   from_number: string | null;
   to_number: string | null;
   started_at: Date;
@@ -90,7 +91,7 @@ export async function loadWebhookCall(callId: string): Promise<{ tenantId: strin
       call_id: c.id,
       agent_id: c.agent_id,
       agent_name: c.agent_name,
-      direction: c.channel === "web" ? "web" : "inbound",
+      direction: c.direction,
       from_number: c.from_number,
       to_number: c.to_number,
       start_timestamp: c.started_at.toISOString(),

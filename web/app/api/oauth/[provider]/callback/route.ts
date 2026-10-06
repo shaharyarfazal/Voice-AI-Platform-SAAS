@@ -1,3 +1,4 @@
+import { createAccount } from "@/lib/accounts";
 import { NextResponse } from "next/server";
 import { createSession, getSession } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
@@ -36,12 +37,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/oauth/[provi
     let [user] = await sql<{ id: string; tenant_id: string }[]>`SELECT id, tenant_id FROM users WHERE email = ${profile.email}`;
     if (!user) {
       if (!(await getSettings()).allowSignup) return go("/login?error=no_account");
-      [user] = await sql.begin(async (tx) => {
-        const [tenant] = await tx`INSERT INTO tenants (name) VALUES (${profile.name}) RETURNING id`;
-        return tx<{ id: string; tenant_id: string }[]>`
-          INSERT INTO users (tenant_id, email, password_hash) VALUES (${tenant.id}, ${profile.email}, NULL)
-          RETURNING id, tenant_id`;
-      });
+      const created = await sql.begin((tx) =>
+        createAccount(tx, { email: profile.email, name: profile.name, passwordHash: null, company: profile.name }),
+      );
+      user = { id: created.userId, tenant_id: created.tenantId };
     }
     await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
     await createSession({ userId: user.id, tenantId: user.tenant_id });

@@ -27,6 +27,7 @@ export type CallRow = {
   agent_name: string | null;
   room_name: string;
   channel: "phone" | "web";
+  direction?: "inbound" | "outbound" | "web";
   from_number: string | null;
   to_number: string | null;
   started_at: Date;

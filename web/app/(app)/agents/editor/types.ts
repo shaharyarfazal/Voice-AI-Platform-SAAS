@@ -22,6 +22,8 @@ export type EditorMcp = {
 };
 
 export type EditorState = {
+  type: "inbound" | "outbound" | "chat";
+  knowledgeBaseIds: string[];
   name: string;
   greeting: string;
   systemPrompt: string;
@@ -42,6 +44,7 @@ export type EditorContext = {
   timezones: string[];
   /** Models and voices offered in the dropdowns. */
   catalog: import("@/lib/provider-catalog").ProviderCatalog;
+  knowledgeBases: { id: string; name: string; chunks: number }[];
   /** Signs this client's webhooks. */
   webhookSecret: string;
 };

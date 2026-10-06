@@ -9,9 +9,6 @@ export default async function CallsPage() {
     WHERE c.tenant_id = ${tenantId} ORDER BY c.started_at DESC LIMIT 200`;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Calls</h1>
-      <CallTable calls={calls} />
-    </div>
+    <CallTable calls={calls} />
   );
 }

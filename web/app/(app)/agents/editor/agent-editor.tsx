@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { DAYS, WEBHOOK_EVENTS, type AnalysisField, type Day, type PostCall, type WebhookEvent } from "@/lib/agent-settings";
 import { Combobox } from "@/components/combobox";
@@ -94,6 +95,7 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
   const setTools = (patch: Partial<EditorState["tools"]>) => setS((p) => ({ ...p, tools: { ...p.tools, ...patch } }));
   const setBooking = (patch: Partial<EditorState["booking"]>) => setS((p) => ({ ...p, booking: { ...p.booking, ...patch } }));
   const setPostCall = (patch: Partial<PostCall>) => setS((p) => ({ ...p, postCall: { ...p.postCall, ...patch } }));
+  const chat = s.type === "chat";
   const setGuard = (patch: Partial<EditorState["guardrails"]>) => setS((p) => ({ ...p, guardrails: { ...p.guardrails, ...patch } }));
 
   return (
@@ -119,19 +121,28 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
       <input type="hidden" name="payload" value={payload} readOnly />
 
       <div className="flex overflow-x-auto border-b border-border" role="tablist">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !(chat && t.id === "after")).map((t) => (
           <button key={t.id} type="button" role="tab" className="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
-            {t.label}
+            {chat && t.id === "voice" ? "AI model & language" : chat && t.id === "tools" ? "Knowledge & tools" : t.label}
           </button>
         ))}
       </div>
 
       {/* General */}
       <section hidden={tab !== "general"} className="space-y-5">
-        <Field label="Name" htmlFor="name" hint="Only you see this.">
-          <input className="input" id="name" value={s.name} onChange={(e) => set("name", e.target.value)} placeholder="Front desk" />
-        </Field>
-        <Field label="Greeting" htmlFor="greeting" hint="The first thing callers hear.">
+        <div className="grid gap-5 sm:grid-cols-[1fr_220px]">
+          <Field label="Name" htmlFor="name" hint="Only you see this.">
+            <input className="input" id="name" value={s.name} onChange={(e) => set("name", e.target.value)} placeholder="Front desk" />
+          </Field>
+          <Field label="Type" htmlFor="type">
+            <select className="input" id="type" value={s.type} onChange={(e) => set("type", e.target.value as EditorState["type"])}>
+              <option value="inbound">Inbound calls</option>
+              <option value="outbound">Outbound calls</option>
+              <option value="chat">Chatbot</option>
+            </select>
+          </Field>
+        </div>
+        <Field label={chat ? "First message" : "Greeting"} htmlFor="greeting" hint={chat ? "Shown when someone opens the chat." : s.type === "outbound" ? "Said when the person answers." : "The first thing callers hear."}>
           <input className="input" id="greeting" value={s.greeting} onChange={(e) => set("greeting", e.target.value)} />
         </Field>
         <Field
@@ -141,15 +152,18 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
         >
           <textarea className="input min-h-72 font-mono text-[13px]" id="systemPrompt" value={s.systemPrompt} onChange={(e) => set("systemPrompt", e.target.value)} />
         </Field>
-        <Toggle checked={s.announceAi} onChange={(v) => set("announceAi", v)} title="Tell callers they're speaking to an AI">
-          Said before the greeting, with a note that the call may be transcribed. Required in the EU; recommended everywhere.
-        </Toggle>
+        {!chat && (
+          <Toggle checked={s.announceAi} onChange={(v) => set("announceAi", v)} title="Tell callers they're speaking to an AI">
+            Said before the greeting, with a note that the call may be recorded. Required in the EU; recommended everywhere.
+          </Toggle>
+        )}
       </section>
 
       {/* Voice & language */}
       <section hidden={tab !== "voice"} className="space-y-6">
         <VoiceSettings s={s} context={context} set={set} />
 
+        {!chat && (
         <fieldset className="card space-y-4">
           <legend className="px-1 text-sm font-medium">Call audio</legend>
           <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Caller surroundings">
@@ -192,17 +206,23 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
             </select>
           </Field>
         </fieldset>
+        )}
       </section>
 
       {/* Tools */}
       <section hidden={tab !== "tools"} className="space-y-4">
-        <Toggle checked={s.tools.endCall} onChange={(v) => setTools({ endCall: v })} title="End call">
-          The agent hangs up after saying goodbye.
-        </Toggle>
-        <Toggle checked={s.tools.transferCall} onChange={(v) => setTools({ transferCall: v })} title="Transfer to a person">
-          When the caller asks for a human, or the agent can&apos;t help. Phone calls only.
-        </Toggle>
-        {s.tools.transferCall && (
+        <KnowledgePicker value={s.knowledgeBaseIds} bases={context.knowledgeBases} onChange={(ids) => set("knowledgeBaseIds", ids)} />
+        {!chat && (
+          <>
+            <Toggle checked={s.tools.endCall} onChange={(v) => setTools({ endCall: v })} title="End call">
+              The agent hangs up after saying goodbye.
+            </Toggle>
+            <Toggle checked={s.tools.transferCall} onChange={(v) => setTools({ transferCall: v })} title="Transfer to a person">
+              When the caller asks for a human, or the agent can&apos;t help. Phone calls only.
+            </Toggle>
+          </>
+        )}
+        {!chat && s.tools.transferCall && (
           <div className="ml-7">
             <Field label="Transfer number" htmlFor="transferNumber" hint="E.164 format, e.g. +14155550100">
               <input className="input max-w-xs" id="transferNumber" value={s.transferNumber} onChange={(e) => set("transferNumber", e.target.value)} placeholder="+14155550100" />
@@ -272,9 +292,48 @@ const ROLE_INFO: Record<Role, { title: string; about: string }> = {
   stt: { title: "Speech recognition", about: "Turns the caller's speech into text." },
 };
 
+function KnowledgePicker({ value, bases, onChange }: { value: string[]; bases: EditorContext["knowledgeBases"]; onChange: (ids: string[]) => void }) {
+  return (
+    <fieldset className="card space-y-3">
+      <legend className="px-1 text-sm font-medium">Knowledge base</legend>
+      {bases.length === 0 ? (
+        <p className="text-sm text-muted">
+          No knowledge bases yet. <Link href="/knowledge" className="text-accent underline">Add your website or documents</Link> and the agent can answer from them.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-muted">The agent searches these before answering questions about the business.</p>
+          {bases.map((b) => (
+            <label key={b.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="accent-[var(--accent)]"
+                checked={value.includes(b.id)}
+                onChange={(e) => onChange(e.target.checked ? [...value, b.id] : value.filter((id) => id !== b.id))}
+              />
+              <span>{b.name}</span>
+              <span className="text-muted">({b.chunks} passages)</span>
+            </label>
+          ))}
+        </>
+      )}
+    </fieldset>
+  );
+}
+
 function VoiceSettings({ s, context, set }: { s: EditorState; context: EditorContext; set: <K extends keyof EditorState>(key: K, value: EditorState[K]) => void }) {
   const providers = s.providers;
   const setProviders = (patch: Partial<EditorState["providers"]>) => set("providers", { ...providers, ...patch });
+  if (s.type === "chat") {
+    return (
+      <>
+        <Field label="Language" htmlFor="language" hint="The chatbot replies in this language. Multilingual follows the visitor.">
+          <Combobox id="language" value={s.language} options={LANGUAGE_CHOICES} onChange={(v) => set("language", v)} searchPlaceholder="Search languages" />
+        </Field>
+        <ProviderPicker role="llm" value={providers.llm} available={context.available.llm} language={s.language} catalog={context.catalog} onChange={(v) => setProviders({ llm: v })} />
+      </>
+    );
+  }
   const realtimeAvailable = context.available.llm.includes("openai");
   const realtime = providers.mode === "realtime";
 

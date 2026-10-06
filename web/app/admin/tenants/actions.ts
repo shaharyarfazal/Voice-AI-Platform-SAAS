@@ -1,5 +1,6 @@
 "use server";
 
+import { createAccount } from "@/lib/accounts";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -26,12 +27,8 @@ export async function createClient(_: FormState, form: FormData): Promise<FormSt
   if (existing) return { error: "A user with this email already exists" };
 
   const passwordHash = await hashPassword(password);
-  const [tenant] = await sql.begin(async (tx) => {
-    const created = await tx`INSERT INTO tenants (name) VALUES (${company}) RETURNING id`;
-    await tx`INSERT INTO users (tenant_id, email, password_hash) VALUES (${created[0].id}, ${email}, ${passwordHash})`;
-    return created;
-  });
-  redirect(`/admin/tenants/${tenant.id}`);
+  const { tenantId } = await sql.begin((tx) => createAccount(tx, { email, passwordHash, company }));
+  redirect(`/admin/tenants/${tenantId}`);
 }
 
 const ClientSettings = z.object({

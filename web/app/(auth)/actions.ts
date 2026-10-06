@@ -3,10 +3,17 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
+import { createAccount } from "@/lib/accounts";
 import { sql } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 
 export type AuthState = { error?: string } | undefined;
+
+/** Only same-site paths, so a crafted link can't send people elsewhere after signing in. */
+function safeNext(v: FormDataEntryValue | null): string | null {
+  const s = typeof v === "string" ? v : "";
+  return s.startsWith("/") && !s.startsWith("//") && !s.startsWith("/\\") ? s : null;
+}
 
 const Credentials = z.object({
   email: z.email().transform((e) => e.toLowerCase().trim()),
@@ -19,25 +26,21 @@ export async function signup(_: AuthState, form: FormData): Promise<AuthState> {
   if ((settings.termsUrl || settings.privacyUrl) && form.get("terms") !== "on") {
     return { error: "Please accept the terms to create an account." };
   }
-  const parsed = Credentials.extend({ company: z.string().trim().min(1, "Company name is required") }).safeParse(
-    Object.fromEntries(form),
-  );
+  const parsed = Credentials.extend({
+    name: z.string().trim().min(1, "Your name is required").max(100),
+    company: z.string().trim().min(1, "Business name is required").max(200),
+  }).safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const { email, password, company } = parsed.data;
+  const { email, password, company, name } = parsed.data;
 
   const [existing] = await sql`SELECT 1 FROM users WHERE email = ${email}`;
   if (existing) return { error: "An account with this email already exists" };
 
   const passwordHash = await hashPassword(password);
   const termsAcceptedAt = form.get("terms") === "on" ? new Date() : null;
-  const [user] = await sql.begin(async (tx) => {
-    const [tenant] = await tx`INSERT INTO tenants (name) VALUES (${company}) RETURNING id`;
-    return tx`INSERT INTO users (tenant_id, email, password_hash, terms_accepted_at, last_login_at)
-              VALUES (${tenant.id}, ${email}, ${passwordHash}, ${termsAcceptedAt}, now()) RETURNING id, tenant_id`;
-  });
-
-  await createSession({ userId: user.id, tenantId: user.tenant_id });
-  redirect("/");
+  const account = await sql.begin((tx) => createAccount(tx, { email, name, passwordHash, company, termsAcceptedAt }));
+  await createSession(account);
+  redirect(safeNext(form.get("next")) ?? "/onboarding");
 }
 
 export async function login(_: AuthState, form: FormData): Promise<AuthState> {
@@ -51,7 +54,7 @@ export async function login(_: AuthState, form: FormData): Promise<AuthState> {
 
   await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
   await createSession({ userId: user.id, tenantId: user.tenant_id });
-  redirect("/");
+  redirect(safeNext(form.get("next")) ?? "/");
 }
 
 export async function logout() {

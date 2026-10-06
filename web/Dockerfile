@@ -15,6 +15,7 @@ WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/public ./public
 # Call recordings (a named volume in docker-compose.yml; created here so it is owned by "node").
 RUN mkdir -p /data/recordings && chown node:node /data/recordings
 ENV RECORDINGS_DIR=/data/recordings

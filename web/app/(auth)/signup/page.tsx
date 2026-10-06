@@ -1,5 +1,6 @@
 import { configuredProviders } from "@/lib/oauth";
 import { getSettings } from "@/lib/settings";
+import { brandingForHost } from "@/lib/workspace";
 import { AuthForm } from "../auth-form";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function SignupPage() {
       privacyUrl={privacyUrl}
       ssoProviders={allowSignup ? configuredProviders() : []}
       notice={allowSignup ? undefined : "Sign-up is closed. Contact us for an account."}
+      brand={await brandingForHost()}
     />
   );
 }

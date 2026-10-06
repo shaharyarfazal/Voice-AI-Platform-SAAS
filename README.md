@@ -2,8 +2,9 @@
 
 Multi-tenant AI voice agents for phone and browser calls, on your own infrastructure.
 
-Each company signs up, creates agents (greeting, instructions, voice, model, transfer number),
-connects phone numbers, and sees every call with its transcript and duration.
+Each business signs up, answers a short setup wizard (its website is read into a knowledge base), and
+gets a phone receptionist, an outbound caller and a website chatbot ready to use. Teams share
+workspaces; agencies resell to clients under their own brand with sub-accounts.
 
 ```
 Phone (Telnyx / Twilio) ──SIP──► LiveKit SIP ─┐
@@ -19,7 +20,7 @@ Browser test call ─────WebRTC─────────────�
 | `agent/` | LiveKit Agents worker. `providers.py` builds speech-to-text, LLM and voice from each agent's provider chain with automatic fallback; `tools.py` has the built-in tools (end call, transfer, check availability, book appointment), clients' custom HTTP functions and MCP servers; `agent.py` runs the call with guardrails (call time limit, silence hang-up, blocked words, apology on failure). |
 | `web/` | Next.js dashboard and API: sign-up, agents, phone numbers, calls, browser test calls, and the owner's admin panel at `/admin`. Database migrations run on startup (`web/lib/migrations.ts`). |
 | `infra/` | Docker Compose for one server: LiveKit, LiveKit SIP, Postgres, Redis, Caddy. |
-| `docs/` | [Deploy on a VPS](docs/deploy-vps.md), [connect Telnyx and Twilio](docs/telephony.md), [Google and Microsoft sign-in and calendars](docs/integrations.md), [webhooks and recordings](docs/webhooks.md). |
+| `docs/` | [Deploy on a VPS](docs/deploy-vps.md), [connect Telnyx and Twilio (inbound and outbound)](docs/telephony.md), [Google and Microsoft sign-in and calendars](docs/integrations.md), [webhooks and recordings](docs/webhooks.md), [white label](docs/white-label.md). The REST API reference is built in at `/docs`. |
 
 ## How a call works
 
@@ -93,6 +94,26 @@ Unit tests: `cd web && npm test`.
 LiveKit's own noise and background-voice cancellation only works on LiveKit Cloud; on a
 self-hosted server it reports "not authorized" and passes audio through unchanged.
 
+## Platform features
+
+- **Workspaces and teams:** invite people by link with owner, admin or member roles; switch between
+  workspaces; agencies create client sub-accounts with their own branding and custom domain.
+- **Setup wizard:** business details, then the website is crawled (or documents uploaded), an AI
+  writes a business profile, and three agents are created from templates the platform admin edits
+  under Admin → Templates.
+- **Knowledge base:** websites (sitemap + links, up to 200 pages), single pages, PDF, Word, text and
+  CSV. Passages are embedded with OpenAI (`text-embedding-3-small`) when the web app has
+  `OPENAI_API_KEY`, and searched together with keyword matching. Agents call
+  `search_knowledge_base` during calls and chats.
+- **Chatbots:** agents of type chat, answered by the web app with the agent's LLM (Claude through
+  Anthropic's SDK; OpenAI, Gemini and Groq through their OpenAI-compatible APIs) with the same
+  knowledge, booking and custom functions. Agents can be duplicated and exported/imported as JSON.
+- **Widgets:** one `<script>` tag for chat, click-to-call or both. Public widget keys only reach their
+  agent, from listed websites, within rate limits; each chat has its own signed token.
+- **Outbound calls** from the dashboard or `POST /api/v1/calls`, with per-call details for the agent.
+- **REST API** with expiring API keys (stored hashed, shown once), documented at `/docs` with an
+  OpenAPI file at `/api/v1/openapi.json`.
+
 ## Admin panel
 
 Users listed in `PLATFORM_ADMIN_EMAILS` (or promoted on the Users page) get `/admin`:
@@ -106,6 +127,6 @@ else gets a 404 there.
 - Taking payments (Stripe). Billing amounts and a CSV export exist; invoicing is manual.
 - Buying numbers from the dashboard through the Telnyx/Twilio APIs. Today numbers are bought
   in the carrier portal and added by hand, and any tenant can claim any unregistered number.
-- Knowledge base (documents/websites), SMS confirmations
-- Password reset and team members
-- Outbound calls
+- SMS confirmations
+- Password reset by email, and sending invites by email (invite links are copied and shared by hand)
+- Bulk outbound campaigns (calls are placed one at a time from the dashboard or the API)

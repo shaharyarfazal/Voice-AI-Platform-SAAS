@@ -179,6 +179,140 @@ const MIGRATIONS: { id: string; sql: string }[] = [
       CREATE INDEX IF NOT EXISTS webhook_deliveries_call_idx ON webhook_deliveries(call_id, created_at);
     `,
   },
+  {
+    id: "0006_workspaces_api_knowledge_widgets",
+    sql: `
+      -- Workspaces: people can belong to several; agencies (top-level workspaces) own sub-accounts.
+      ALTER TABLE tenants
+        ADD COLUMN IF NOT EXISTS parent_id uuid REFERENCES tenants(id) ON DELETE CASCADE,
+        ADD COLUMN IF NOT EXISTS branding jsonb NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS custom_domain text UNIQUE,
+        ADD COLUMN IF NOT EXISTS website text,
+        ADD COLUMN IF NOT EXISTS profile jsonb NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS onboarded_at timestamptz;
+      CREATE INDEX IF NOT EXISTS tenants_parent_idx ON tenants(parent_id);
+      -- Workspaces that existed before onboarding don't get the wizard.
+      UPDATE tenants SET onboarded_at = created_at WHERE onboarded_at IS NULL;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS name text NOT NULL DEFAULT '';
+
+      CREATE TABLE IF NOT EXISTS memberships (
+        tenant_id   uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role        text NOT NULL CHECK (role IN ('owner', 'admin', 'member')),
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (tenant_id, user_id)
+      );
+      CREATE INDEX IF NOT EXISTS memberships_user_idx ON memberships(user_id);
+      INSERT INTO memberships (tenant_id, user_id, role)
+        SELECT tenant_id, id, 'owner' FROM users ON CONFLICT DO NOTHING;
+
+      CREATE TABLE IF NOT EXISTS invites (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id    uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        email        text NOT NULL,
+        role         text NOT NULL CHECK (role IN ('admin', 'member')),
+        token_hash   text NOT NULL UNIQUE,
+        invited_by   uuid REFERENCES users(id) ON DELETE SET NULL,
+        expires_at   timestamptz NOT NULL,
+        accepted_at  timestamptz,
+        created_at   timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS invites_tenant_idx ON invites(tenant_id);
+
+      -- API keys: only a SHA-256 hash is stored; the key is shown once.
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id     uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        name          text NOT NULL,
+        prefix        text NOT NULL,
+        key_hash      text NOT NULL UNIQUE,
+        created_by    uuid REFERENCES users(id) ON DELETE SET NULL,
+        expires_at    timestamptz,
+        last_used_at  timestamptz,
+        revoked_at    timestamptz,
+        created_at    timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS api_keys_tenant_idx ON api_keys(tenant_id);
+
+      -- Agent type and knowledge.
+      ALTER TABLE agents
+        ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'inbound' CHECK (type IN ('inbound', 'outbound', 'chat')),
+        ADD COLUMN IF NOT EXISTS knowledge_base_ids uuid[] NOT NULL DEFAULT '{}';
+
+      CREATE TABLE IF NOT EXISTS knowledge_bases (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id   uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        name        text NOT NULL,
+        created_at  timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS knowledge_bases_tenant_idx ON knowledge_bases(tenant_id);
+      CREATE TABLE IF NOT EXISTS kb_sources (
+        id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        kb_id        uuid NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+        tenant_id    uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        kind         text NOT NULL CHECK (kind IN ('website', 'url', 'file', 'text')),
+        title        text NOT NULL,
+        url          text,
+        status       text NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'processing', 'ready', 'error')),
+        error        text,
+        pages        integer NOT NULL DEFAULT 0,
+        chars        integer NOT NULL DEFAULT 0,
+        chunks       integer NOT NULL DEFAULT 0,
+        options      jsonb NOT NULL DEFAULT '{}',
+        content      text,
+        created_at   timestamptz NOT NULL DEFAULT now(),
+        updated_at   timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS kb_sources_kb_idx ON kb_sources(kb_id);
+      CREATE TABLE IF NOT EXISTS kb_chunks (
+        id         bigserial PRIMARY KEY,
+        source_id  uuid NOT NULL REFERENCES kb_sources(id) ON DELETE CASCADE,
+        kb_id      uuid NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+        title      text NOT NULL DEFAULT '',
+        url        text,
+        content    text NOT NULL,
+        embedding  real[],
+        tsv        tsvector GENERATED ALWAYS AS (to_tsvector('simple', title || ' ' || content)) STORED
+      );
+      CREATE INDEX IF NOT EXISTS kb_chunks_kb_idx ON kb_chunks(kb_id);
+      CREATE INDEX IF NOT EXISTS kb_chunks_tsv_idx ON kb_chunks USING gin(tsv);
+
+      -- Website widgets (chat, voice or both) and chat conversations.
+      CREATE TABLE IF NOT EXISTS widgets (
+        id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id        uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        agent_id         uuid NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        name             text NOT NULL,
+        mode             text NOT NULL CHECK (mode IN ('chat', 'voice', 'both')),
+        public_key       text NOT NULL UNIQUE,
+        allowed_origins  text[] NOT NULL DEFAULT '{}',
+        appearance       jsonb NOT NULL DEFAULT '{}',
+        enabled          boolean NOT NULL DEFAULT true,
+        created_at       timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS widgets_tenant_idx ON widgets(tenant_id);
+      CREATE TABLE IF NOT EXISTS chat_sessions (
+        id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id        uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        agent_id         uuid REFERENCES agents(id) ON DELETE SET NULL,
+        widget_id        uuid REFERENCES widgets(id) ON DELETE SET NULL,
+        channel          text NOT NULL CHECK (channel IN ('widget', 'api', 'dashboard')),
+        visitor          jsonb NOT NULL DEFAULT '{}',
+        messages         jsonb NOT NULL DEFAULT '[]',
+        message_count    integer NOT NULL DEFAULT 0,
+        input_tokens     integer NOT NULL DEFAULT 0,
+        output_tokens    integer NOT NULL DEFAULT 0,
+        started_at       timestamptz NOT NULL DEFAULT now(),
+        last_message_at  timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS chat_sessions_tenant_idx ON chat_sessions(tenant_id, last_message_at DESC);
+
+      -- Call direction (inbound phone, outbound phone, web).
+      ALTER TABLE calls ADD COLUMN IF NOT EXISTS direction text NOT NULL DEFAULT 'inbound';
+      UPDATE calls SET direction = 'web' WHERE channel = 'web' AND direction = 'inbound';
+      ALTER TABLE live_calls ADD COLUMN IF NOT EXISTS direction text NOT NULL DEFAULT 'inbound';
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {

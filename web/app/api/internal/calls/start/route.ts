@@ -11,6 +11,7 @@ const CallStart = z.object({
   callId: z.uuid().optional(),
   startedAt: z.iso.datetime({ offset: true }).optional(),
   channel: z.enum(["phone", "web"]),
+  direction: z.enum(["inbound", "outbound", "web"]).optional(),
   fromNumber: z.string().nullish(),
   toNumber: z.string().nullish(),
 });
@@ -23,9 +24,10 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({ error: parsed.error.issues }, { status: 400 });
   const c = parsed.data;
   const callId = c.callId ?? randomUUID();
+  const direction = c.direction ?? (c.channel === "web" ? "web" : "inbound");
   const inserted = await sql<{ started_at: Date; agent_name: string }[]>`
-    INSERT INTO live_calls (room_name, tenant_id, agent_id, channel, from_number, to_number, call_id, started_at)
-    SELECT ${c.roomName}, a.tenant_id, a.id, ${c.channel}, ${c.fromNumber ?? null}, ${c.toNumber ?? null}, ${callId},
+    INSERT INTO live_calls (room_name, tenant_id, agent_id, channel, direction, from_number, to_number, call_id, started_at)
+    SELECT ${c.roomName}, a.tenant_id, a.id, ${c.channel}, ${direction}, ${c.fromNumber ?? null}, ${c.toNumber ?? null}, ${callId},
            ${c.startedAt ?? new Date().toISOString()}
     FROM agents a WHERE a.id = ${c.agentId}
     ON CONFLICT (room_name) DO NOTHING
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
       call_id: callId,
       agent_id: c.agentId,
       agent_name: started.agent_name,
-      direction: c.channel === "web" ? "web" : "inbound",
+      direction,
       from_number: c.fromNumber ?? null,
       to_number: c.toNumber ?? null,
       start_timestamp: started.started_at.toISOString(),

@@ -16,3 +16,18 @@ export async function createTestCallToken(agentId: string, userId: string) {
   });
   return { roomName, token: await token.toJwt(), url: process.env.NEXT_PUBLIC_LIVEKIT_URL! };
 }
+
+/** Token for a website visitor's voice call through a widget. */
+export async function createWidgetCallToken(agentId: string, widgetId: string) {
+  const id = crypto.randomUUID();
+  const roomName = `widget-${id.slice(0, 13)}`;
+  const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
+    identity: `visitor-${id.slice(0, 8)}`,
+    ttl: "10m",
+  });
+  token.addGrant({ room: roomName, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true });
+  token.roomConfig = new RoomConfiguration({
+    agents: [new RoomAgentDispatch({ agentName: AGENT_NAME, metadata: JSON.stringify({ agentId, widgetId }) })],
+  });
+  return { roomName, token: await token.toJwt(), url: process.env.NEXT_PUBLIC_LIVEKIT_URL! };
+}

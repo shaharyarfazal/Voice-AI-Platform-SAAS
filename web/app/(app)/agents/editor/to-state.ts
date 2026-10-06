@@ -12,6 +12,8 @@ Business information:
 Ask one question at a time. If you don't know something, say so and offer to take a message or transfer the call.`;
 
 type Row = {
+  type?: string;
+  knowledge_base_ids?: string[];
   name: string;
   greeting: string;
   system_prompt: string;
@@ -28,12 +30,15 @@ type Row = {
 };
 
 /** Server-side: an agent row (or nothing, for a new agent) as editor state. Secrets are never sent. */
-export function toEditorState(row?: Row, browserTimezone = "UTC"): EditorState {
+export function toEditorState(row?: Row, browserTimezone = "UTC", type: EditorState["type"] = "inbound"): EditorState {
   const tools = parseTools(row?.tools);
   const booking = parseBooking(row?.booking);
+  const agentType = (row?.type as EditorState["type"]) ?? type;
   return {
+    type: agentType,
+    knowledgeBaseIds: row?.knowledge_base_ids ?? [],
     name: row?.name ?? "",
-    greeting: row?.greeting ?? "Thanks for calling! How can I help you today?",
+    greeting: row?.greeting ?? (agentType === "chat" ? "Hi! How can I help you today?" : "Thanks for calling! How can I help you today?"),
     systemPrompt: row?.system_prompt ?? DEFAULT_PROMPT,
     announceAi: row?.announce_ai ?? true,
     language: row?.language ?? "en-US",

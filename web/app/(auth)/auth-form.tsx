@@ -10,16 +10,27 @@ type Props = {
   privacyUrl?: string;
   ssoProviders?: ("google" | "microsoft")[];
   notice?: string;
+  /** Where to go after signing in (same-site path). */
+  next?: string;
+  brand?: { productName: string; logoUrl: string };
 };
 
 const SSO_LABEL = { google: "Continue with Google", microsoft: "Continue with Microsoft" };
 
-export function AuthForm({ mode, termsUrl, privacyUrl, ssoProviders = [], notice }: Props) {
+export function AuthForm({ mode, termsUrl, privacyUrl, ssoProviders = [], notice, next, brand }: Props) {
   const [state, action, pending] = useActionState(mode === "login" ? login : signup, undefined);
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-12">
-      <h1 className="mb-6 text-2xl font-semibold">{mode === "login" ? "Sign in" : "Create your account"}</h1>
+      {brand && (
+        <div className="mb-8 flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-8 w-8 rounded object-contain" />}
+          <span className="text-lg font-semibold">{brand.productName}</span>
+        </div>
+      )}
+      <h1 className="mb-1 text-2xl font-semibold">{mode === "login" ? "Sign in" : "Create your account"}</h1>
+      <p className="mb-6 text-sm text-muted">{mode === "login" ? "Welcome back." : "Your AI receptionist is a few minutes away."}</p>
       {notice && <p className="mb-4 rounded-lg border border-critical/40 bg-critical/5 p-3 text-sm">{notice}</p>}
       {ssoProviders.length > 0 && (
         <div className="mb-6 space-y-2">
@@ -35,11 +46,18 @@ export function AuthForm({ mode, termsUrl, privacyUrl, ssoProviders = [], notice
         </div>
       )}
       <form action={action} className="space-y-4">
+        {next && <input type="hidden" name="next" value={next} />}
         {mode === "signup" && (
-          <div>
-            <label className="label" htmlFor="company">Company name</label>
-            <input className="input" id="company" name="company" required />
-          </div>
+          <>
+            <div>
+              <label className="label" htmlFor="name">Your name</label>
+              <input className="input" id="name" name="name" autoComplete="name" required />
+            </div>
+            <div>
+              <label className="label" htmlFor="company">Business name</label>
+              <input className="input" id="company" name="company" autoComplete="organization" required />
+            </div>
+          </>
         )}
         <div>
           <label className="label" htmlFor="email">Email</label>
@@ -68,9 +86,9 @@ export function AuthForm({ mode, termsUrl, privacyUrl, ssoProviders = [], notice
             </span>
           </label>
         )}
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p className="text-sm text-critical">▲ <span className="text-foreground">{state.error}</span></p>}
         <button className="btn w-full" disabled={pending}>
-          {mode === "login" ? "Sign in" : "Create account"}
+          {pending ? (mode === "login" ? "Signing in…" : "Creating…") : mode === "login" ? "Sign in" : "Create account"}
         </button>
       </form>
       <p className="mt-4 text-sm text-muted">

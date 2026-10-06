@@ -6,4 +6,7 @@ export async function register() {
 
   const { startMaintenance } = await import("./lib/maintenance");
   startMaintenance();
+
+  const { resumeKnowledgeQueue } = await import("./lib/knowledge/ingest");
+  await resumeKnowledgeQueue();
 }

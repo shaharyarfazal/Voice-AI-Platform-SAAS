@@ -113,6 +113,25 @@ def build_tools(
 
         tools.append(transfer_call)
 
+    if tools_cfg.get("knowledge"):
+
+        @function_tool(name="search_knowledge_base")
+        async def search_knowledge_base(context: RunContext, query: str) -> str:
+            """Look up information about the business: services, prices, opening hours, location, policies,
+            products, FAQs. Use it before answering any question about the business.
+
+            Args:
+                query: What to look up, as a short question or keywords, e.g. "parking at the clinic".
+            """
+            # Only spoken if the lookup is slow.
+            async with context.with_filler("Let me check that for you.", delay=1.5):
+                result = await _internal("/api/internal/tools/knowledge", {"agentId": agent_id, "query": query})
+            text = str(result.get("result") or "The knowledge base didn't answer. Say you'll find out and offer to take a message.")
+            log_tool("search_knowledge_base", {"query": query}, f"{result.get('hits', 0)} passages found")
+            return text[:6000]
+
+        tools.append(search_knowledge_base)
+
     if tools_cfg.get("booking"):
 
         @function_tool(name="check_availability")

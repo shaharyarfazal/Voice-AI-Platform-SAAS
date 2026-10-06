@@ -1,4 +1,5 @@
 import { configuredProviders } from "@/lib/oauth";
+import { brandingForHost } from "@/lib/workspace";
 import { AuthForm } from "../auth-form";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,14 @@ const NOTICES: Record<string, string> = {
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { error } = await searchParams;
-  return <AuthForm mode="login" ssoProviders={configuredProviders()} notice={typeof error === "string" ? NOTICES[error] : undefined} />;
+  const { error, next } = await searchParams;
+  return (
+    <AuthForm
+      mode="login"
+      ssoProviders={configuredProviders()}
+      notice={typeof error === "string" ? NOTICES[error] : undefined}
+      next={typeof next === "string" ? next : undefined}
+      brand={await brandingForHost()}
+    />
+  );
 }

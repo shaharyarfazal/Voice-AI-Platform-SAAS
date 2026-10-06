@@ -3,6 +3,7 @@ import { createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from "no
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 import { sql } from "./db";
 
 const scrypt = promisify(scryptCb) as (password: string, salt: Buffer, keylen: number) => Promise<Buffer>;
@@ -10,7 +11,23 @@ const scrypt = promisify(scryptCb) as (password: string, salt: Buffer, keylen: n
 export const SESSION_COOKIE = "session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 
-export type Session = { userId: string; tenantId: string };
+export type Role = "owner" | "admin" | "member";
+export type Session = { userId: string; tenantId: string; role: Role };
+const RANK: Record<Role, number> = { member: 1, admin: 2, owner: 3 };
+
+/**
+ * The user's role in a workspace: their own membership, or their membership of the agency that
+ * owns it (agency owners and admins manage their sub-accounts).
+ */
+export async function roleIn(userId: string, tenantId: string): Promise<Role | null> {
+  const [row] = await sql<{ role: Role }[]>`
+    SELECT role FROM memberships WHERE tenant_id = ${tenantId} AND user_id = ${userId}
+    UNION ALL
+    SELECT m.role FROM tenants t JOIN memberships m ON m.tenant_id = t.parent_id
+    WHERE t.id = ${tenantId} AND m.user_id = ${userId} AND m.role IN ('owner', 'admin')
+    LIMIT 1`;
+  return row?.role ?? null;
+}
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
@@ -32,9 +49,9 @@ function sign(value: string): string {
   return createHmac("sha256", process.env.SESSION_SECRET!).update(value).digest("base64url");
 }
 
-export async function createSession(session: Session): Promise<void> {
+export async function createSession(session: { userId: string; tenantId: string }): Promise<void> {
   const payload = Buffer.from(
-    JSON.stringify({ ...session, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS }),
+    JSON.stringify({ userId: session.userId, tenantId: session.tenantId, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS }),
   ).toString("base64url");
   (await cookies()).set(SESSION_COOKIE, `${payload}.${sign(payload)}`, {
     httpOnly: true,
@@ -49,7 +66,11 @@ export async function destroySession(): Promise<void> {
   (await cookies()).delete(SESSION_COOKIE);
 }
 
-export async function getSession(): Promise<Session | null> {
+/**
+ * The signed-in user and their current workspace, checked against the database on every request
+ * (once per request), so removing someone from a workspace takes effect immediately.
+ */
+export const getSession = cache(async (): Promise<Session | null> => {
   const raw = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!raw) return null;
   const [payload, signature] = raw.split(".");
@@ -59,12 +80,28 @@ export async function getSession(): Promise<Session | null> {
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
   const data = JSON.parse(Buffer.from(payload, "base64url").toString());
   if (typeof data.exp !== "number" || data.exp < Date.now() / 1000) return null;
-  return { userId: data.userId, tenantId: data.tenantId };
-}
+  const role = await roleIn(data.userId, data.tenantId);
+  if (role) return { userId: data.userId, tenantId: data.tenantId, role };
+  // No longer in that workspace: fall back to one they still belong to.
+  const [other] = await sql<{ tenant_id: string; role: Role }[]>`
+    SELECT tenant_id, role FROM memberships WHERE user_id = ${data.userId} ORDER BY created_at LIMIT 1`;
+  return other ? { userId: data.userId, tenantId: other.tenant_id, role: other.role } : null;
+});
 
 export async function requireSession(): Promise<Session> {
   const session = await getSession();
   if (!session) redirect("/login");
+  return session;
+}
+
+export function hasRole(session: Session, minimum: Role): boolean {
+  return RANK[session.role] >= RANK[minimum];
+}
+
+/** For workspace settings (team, API keys, branding): owners and admins only. */
+export async function requireRole(minimum: Role): Promise<Session> {
+  const session = await requireSession();
+  if (!hasRole(session, minimum)) notFound();
   return session;
 }
 

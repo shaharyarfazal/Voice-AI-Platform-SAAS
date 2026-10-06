@@ -8,6 +8,7 @@ const CallReport = z.object({
   roomName: z.string().min(1),
   agentId: z.uuid(),
   callId: z.uuid().optional(),
+  direction: z.enum(["inbound", "outbound", "web"]).optional(),
   channel: z.enum(["phone", "web"]),
   fromNumber: z.string().nullish(),
   toNumber: z.string().nullish(),
@@ -57,10 +58,10 @@ export async function POST(request: Request) {
   const hasRecording = await recordingExists(callId);
 
   const inserted = await sql`
-    INSERT INTO calls (id, has_recording, tenant_id, agent_id, room_name, channel, from_number, to_number,
+    INSERT INTO calls (id, direction, has_recording, tenant_id, agent_id, room_name, channel, from_number, to_number,
                        started_at, ended_at, duration_seconds, outcome, transcript,
                        stt_seconds, llm_input_tokens, llm_output_tokens, tts_characters, latency)
-    SELECT ${callId}, ${hasRecording}, a.tenant_id, a.id, ${call.roomName}, ${call.channel}, ${call.fromNumber ?? null},
+    SELECT ${callId}, ${call.direction ?? (call.channel === "web" ? "web" : "inbound")}, ${hasRecording}, a.tenant_id, a.id, ${call.roomName}, ${call.channel}, ${call.fromNumber ?? null},
            ${call.toNumber ?? null}, ${call.startedAt}, ${call.endedAt}, ${durationSeconds},
            ${call.outcome}, ${sql.json(call.transcript)},
            ${usage.sttSeconds}, ${usage.llmInputTokens}, ${usage.llmOutputTokens}, ${usage.ttsCharacters},

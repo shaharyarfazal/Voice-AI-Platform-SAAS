@@ -7,19 +7,24 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/*.test.ts"
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "prebuild": "node -e \"require('fs').mkdirSync('public/widget',{recursive:true});require('fs').copyFileSync('node_modules/livekit-client/dist/livekit-client.umd.js','public/widget/livekit-client.umd.js')\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@livekit/components-react": "^2.9.24",
     "@livekit/components-styles": "^1.2.0",
     "ioredis": "^6.0.0",
     "livekit-client": "^2.22.3",
     "livekit-server-sdk": "^2.19.1",
+    "mammoth": "^1.13.0",
     "next": "16.3.8",
+    "node-html-parser": "^9.0.4",
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
+    "unpdf": "^1.8.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

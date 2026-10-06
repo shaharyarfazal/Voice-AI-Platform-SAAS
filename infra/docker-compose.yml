@@ -113,6 +113,14 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
+      # Outbound calls: SIP credentials for dialling out through your carrier (docs/telephony.md).
+      TELNYX_SIP_USERNAME: ${TELNYX_SIP_USERNAME:-}
+      TELNYX_SIP_PASSWORD: ${TELNYX_SIP_PASSWORD:-}
+      TWILIO_SIP_DOMAIN: ${TWILIO_SIP_DOMAIN:-}
+      TWILIO_SIP_USERNAME: ${TWILIO_SIP_USERNAME:-}
+      TWILIO_SIP_PASSWORD: ${TWILIO_SIP_PASSWORD:-}
+      # White label: product name shown when no agency branding applies.
+      PLATFORM_NAME: ${PLATFORM_NAME:-}
     volumes:
       - recordings:/data/recordings
 

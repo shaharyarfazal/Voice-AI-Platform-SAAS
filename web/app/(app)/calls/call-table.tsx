@@ -11,7 +11,7 @@ export function CallTable({ calls }: { calls: CallRow[] }) {
           <tr>
             <th>When</th>
             <th>Agent</th>
-            <th>Channel</th>
+            <th>Type</th>
             <th>From</th>
             <th>Duration</th>
             <th>Outcome</th>
@@ -24,7 +24,7 @@ export function CallTable({ calls }: { calls: CallRow[] }) {
                 <Link className="underline" href={`/calls/${c.id}`}>{formatDateTime(c.started_at)}</Link>
               </td>
               <td>{c.agent_name ?? "—"}</td>
-              <td>{c.channel}</td>
+              <td className="capitalize">{c.direction ?? c.channel}</td>
               <td>{c.from_number ?? "—"}</td>
               <td>{formatDuration(c.duration_seconds)}</td>
               <td>{c.outcome.replaceAll("_", " ")}</td>

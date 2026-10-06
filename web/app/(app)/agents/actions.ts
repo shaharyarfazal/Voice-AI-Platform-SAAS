@@ -14,6 +14,7 @@ import {
 } from "@/lib/agent-settings";
 import { requireSession } from "@/lib/auth";
 import { findProvider, LANGUAGES } from "@/lib/catalog";
+import { duplicateAgent, importAgent } from "@/lib/agent-io";
 import { encrypt } from "@/lib/crypto";
 import { elevenLabsVoiceExists } from "@/lib/elevenlabs";
 import { sql } from "@/lib/db";
@@ -32,6 +33,8 @@ const Choice = (role: "stt" | "llm" | "tts") =>
 const SecretInput = { authorization: z.string().max(2000).optional(), keepAuthorization: z.boolean().default(false) };
 
 const Payload = z.object({
+  type: z.enum(["inbound", "outbound", "chat"]).default("inbound"),
+  knowledgeBaseIds: z.array(z.uuid()).max(10).default([]),
   name: z.string().trim().min(1, "Give the agent a name").max(100),
   greeting: z.string().trim().min(1, "The greeting can't be empty").max(500),
   systemPrompt: z.string().trim().min(1, "Instructions can't be empty").max(20000),
@@ -96,6 +99,10 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
       return { error: `Webhook URL: ${(e as Error).message}` };
     }
   }
+  if (a.knowledgeBaseIds.length) {
+    const owned = await sql`SELECT id FROM knowledge_bases WHERE tenant_id = ${tenantId} AND id = ANY(${a.knowledgeBaseIds})`;
+    if (owned.length !== new Set(a.knowledgeBaseIds).size) return { error: "Pick knowledge bases from this workspace" };
+  }
   const fieldNames = a.postCall.analysisFields.map((f) => f.name);
   if (new Set(fieldNames).size !== fieldNames.length) return { error: "Two analysis fields have the same name" };
   const tts = a.providers.tts;
@@ -140,6 +147,8 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
     booking: sql.json(a.booking),
     guardrails: sql.json(a.guardrails),
     post_call: sql.json(a.postCall),
+    type: a.type,
+    knowledge_base_ids: [...new Set(a.knowledgeBaseIds)],
   };
 
   if (isUuid(id)) {
@@ -156,8 +165,33 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
 export async function deleteAgent(form: FormData) {
   const { tenantId } = await requireSession();
   const id = form.get("id")?.toString();
-  if (isUuid(id)) await sql`DELETE FROM agents WHERE id = ${id} AND tenant_id = ${tenantId}`;
-  redirect("/agents");
+  const [row] = isUuid(id) ? await sql<{ type: string }[]>`DELETE FROM agents WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING type` : [];
+  redirect(row?.type === "chat" ? "/chatbots" : "/agents");
+}
+
+export async function duplicate(form: FormData) {
+  const { tenantId } = await requireSession();
+  const id = form.get("id")?.toString();
+  const copy = isUuid(id) ? await duplicateAgent(tenantId, id) : null;
+  if (copy) redirect(`/agents/${copy}`);
+}
+
+export async function importAgentFile(text: string): Promise<{ error?: string } | undefined> {
+  const { tenantId } = await requireSession();
+  if (text.length > 500_000) return { error: "That file is too large to be an agent export." };
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return { error: "That file isn't valid JSON." };
+  }
+  let id: string;
+  try {
+    id = await importAgent(tenantId, json);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  redirect(`/agents/${id}`);
 }
 
 export type TestWebhookResult = { ok: boolean; message: string };
