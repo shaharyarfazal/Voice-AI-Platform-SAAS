@@ -19,7 +19,7 @@ Browser test call ─────WebRTC─────────────�
 | `agent/` | LiveKit Agents worker. `providers.py` builds speech-to-text, LLM and voice from each agent's provider chain with automatic fallback; `tools.py` has the built-in tools (end call, transfer, check availability, book appointment), clients' custom HTTP functions and MCP servers; `agent.py` runs the call with guardrails (call time limit, silence hang-up, blocked words, apology on failure). |
 | `web/` | Next.js dashboard and API: sign-up, agents, phone numbers, calls, browser test calls, and the owner's admin panel at `/admin`. Database migrations run on startup (`web/lib/migrations.ts`). |
 | `infra/` | Docker Compose for one server: LiveKit, LiveKit SIP, Postgres, Redis, Caddy. |
-| `docs/` | [Deploy on a VPS](docs/deploy-vps.md), [connect Telnyx and Twilio](docs/telephony.md), [Google and Microsoft sign-in and calendars](docs/integrations.md). |
+| `docs/` | [Deploy on a VPS](docs/deploy-vps.md), [connect Telnyx and Twilio](docs/telephony.md), [Google and Microsoft sign-in and calendars](docs/integrations.md), [webhooks and recordings](docs/webhooks.md). |
 
 ## How a call works
 
@@ -28,8 +28,10 @@ Browser test call ─────WebRTC─────────────�
 3. The agent fetches its configuration from `GET /api/internal/agent-config`, by the dialled
    number or, for test calls, by agent id. Unknown numbers are hung up straight away.
 4. The agent greets the caller and runs the conversation.
-5. When the call ends, the agent posts the duration, outcome and transcript to
-   `POST /api/internal/calls`.
+5. When the call ends, the agent uploads the recording, posts the duration, outcome and
+   transcript to `POST /api/internal/calls`, then has the LLM analyse the call and posts that to
+   `POST /api/internal/calls/analysis`. The web app sends the client's `call_started`,
+   `call_ended` and `call_analyzed` webhooks along the way.
 
 ## Local development
 
@@ -76,6 +78,9 @@ Unit tests: `cd web && npm test`.
   Only public https addresses are allowed; credentials are stored encrypted.
 - **Guardrails:** allowed topics, forbidden topics, blocked words, maximum call length, silence
   timeout. Platform-wide rules (no prompt leaks, no made-up facts, emergencies to 911/112) always apply.
+- **Recording & webhooks:** call recording, `call_started` / `call_ended` / `call_analyzed`
+  webhooks (signed, with transcript and recording link), and post-call analysis: summary,
+  sentiment, success, and custom fields to extract. See [docs/webhooks.md](docs/webhooks.md).
 - **Call audio:** "noisy places" mode (stricter voice detection, a few words needed to interrupt,
   and AssemblyAI voice isolation when AssemblyAI is the speech recognizer) and response speed
   (how long a pause ends the caller's turn). Every call records its response time and where the
@@ -97,6 +102,6 @@ else gets a 404 there.
 - Taking payments (Stripe). Billing amounts and a CSV export exist; invoicing is manual.
 - Buying numbers from the dashboard through the Telnyx/Twilio APIs. Today numbers are bought
   in the carrier portal and added by hand, and any tenant can claim any unregistered number.
-- Knowledge base (documents/websites), post-call webhooks, SMS confirmations
+- Knowledge base (documents/websites), SMS confirmations
 - Password reset and team members
 - Outbound calls

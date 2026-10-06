@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { isInternalRequest } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { recordingExists } from "@/lib/recordings";
+import { dispatchWebhook, loadWebhookCall } from "@/lib/webhooks";
 
 const CallReport = z.object({
   roomName: z.string().min(1),
   agentId: z.uuid(),
+  callId: z.uuid().optional(),
   channel: z.enum(["phone", "web"]),
   fromNumber: z.string().nullish(),
   toNumber: z.string().nullish(),
@@ -34,7 +37,8 @@ const CallReport = z.object({
     .optional(),
 });
 
-// Called by the agent worker when a call ends. Idempotent on room name.
+// Called by the agent worker when a call ends (after uploading the recording). Idempotent on room
+// name. Sends the call_ended webhook.
 export async function POST(request: Request) {
   if (!isInternalRequest(request)) return new Response("Unauthorized", { status: 401 });
 
@@ -48,11 +52,15 @@ export async function POST(request: Request) {
     Math.round((Date.parse(call.endedAt) - Date.parse(call.startedAt)) / 1000),
   );
 
+  const [live] = await sql<{ call_id: string | null }[]>`SELECT call_id FROM live_calls WHERE room_name = ${call.roomName}`;
+  const callId = call.callId ?? live?.call_id ?? crypto.randomUUID();
+  const hasRecording = await recordingExists(callId);
+
   const inserted = await sql`
-    INSERT INTO calls (tenant_id, agent_id, room_name, channel, from_number, to_number,
+    INSERT INTO calls (id, has_recording, tenant_id, agent_id, room_name, channel, from_number, to_number,
                        started_at, ended_at, duration_seconds, outcome, transcript,
                        stt_seconds, llm_input_tokens, llm_output_tokens, tts_characters, latency)
-    SELECT a.tenant_id, a.id, ${call.roomName}, ${call.channel}, ${call.fromNumber ?? null},
+    SELECT ${callId}, ${hasRecording}, a.tenant_id, a.id, ${call.roomName}, ${call.channel}, ${call.fromNumber ?? null},
            ${call.toNumber ?? null}, ${call.startedAt}, ${call.endedAt}, ${durationSeconds},
            ${call.outcome}, ${sql.json(call.transcript)},
            ${usage.sttSeconds}, ${usage.llmInputTokens}, ${usage.llmOutputTokens}, ${usage.ttsCharacters},
@@ -62,5 +70,7 @@ export async function POST(request: Request) {
     RETURNING id`;
 
   await sql`DELETE FROM live_calls WHERE room_name = ${call.roomName}`;
-  return Response.json({ id: inserted[0]?.id ?? null });
+  const id: string | null = inserted[0]?.id ?? null;
+  if (id) dispatchWebhook(call.agentId, "call_ended", id, async () => (await loadWebhookCall(id))?.call ?? null);
+  return Response.json({ id });
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import { parseBooking, parseGuardrails, parseTools } from "./agent-settings";
+import { parseBooking, parseGuardrails, parsePostCall, parseTools } from "./agent-settings";
 import { languageLabel, providerChain, resolveProviders } from "./catalog";
 import { decrypt } from "./crypto";
 import type { AgentRow } from "./db";
@@ -10,6 +10,7 @@ export type FullAgentRow = AgentRow & {
   tools: unknown;
   guardrails: unknown;
   booking: unknown;
+  post_call: unknown;
   tenant_name: string;
 };
 
@@ -51,6 +52,7 @@ export async function buildRuntimeConfig(row: FullAgentRow) {
   const tools = parseTools(row.tools);
   const booking = parseBooking(row.booking);
   const guardrails = parseGuardrails(row.guardrails);
+  const postCall = parsePostCall(row.post_call);
   const providers = resolveProviders(row.providers as never, row);
   const language = row.language || "en-US";
   const bookingReady = tools.booking && Boolean(booking.integrationId);
@@ -110,6 +112,11 @@ export async function buildRuntimeConfig(row: FullAgentRow) {
       maxCallSeconds: guardrails.maxCallMinutes * 60,
       silenceTimeoutSeconds: guardrails.silenceTimeoutSeconds,
       blockedPhrases: guardrails.blockedPhrases,
+    },
+    postCall: {
+      recordCalls: postCall.recordCalls,
+      successCriteria: postCall.successCriteria,
+      analysisFields: postCall.analysisFields,
     },
     // Kept for agent workers older than the provider chains.
     voiceId: providers.tts.voice ?? row.voice_id,

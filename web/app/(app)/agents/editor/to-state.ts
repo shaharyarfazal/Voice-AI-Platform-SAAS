@@ -1,4 +1,4 @@
-import { parseBooking, parseGuardrails, parseTools } from "@/lib/agent-settings";
+import { parseBooking, parseGuardrails, parsePostCall, parseTools } from "@/lib/agent-settings";
 import { resolveProviders } from "@/lib/catalog";
 import type { EditorState } from "./types";
 
@@ -24,6 +24,7 @@ type Row = {
   tools: unknown;
   booking: unknown;
   guardrails: unknown;
+  post_call?: unknown;
 };
 
 /** Server-side: an agent row (or nothing, for a new agent) as editor state. Secrets are never sent. */
@@ -66,5 +67,6 @@ export function toEditorState(row?: Row, browserTimezone = "UTC"): EditorState {
     },
     booking: row ? booking : { ...booking, timezone: browserTimezone },
     guardrails: parseGuardrails(row?.guardrails),
+    postCall: parsePostCall(row?.post_call),
   };
 }

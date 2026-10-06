@@ -152,6 +152,33 @@ const MIGRATIONS: { id: string; sql: string }[] = [
       ALTER TABLE calls ADD COLUMN IF NOT EXISTS latency jsonb NOT NULL DEFAULT '{}';
     `,
   },
+  {
+    id: "0005_recordings_webhooks_analysis",
+    sql: `
+      -- Recording, post-call analysis and webhook settings per agent.
+      ALTER TABLE agents ADD COLUMN IF NOT EXISTS post_call jsonb NOT NULL DEFAULT '{}';
+      -- The agent worker picks the call id when the call starts, so every webhook carries the same id.
+      ALTER TABLE live_calls
+        ADD COLUMN IF NOT EXISTS call_id uuid,
+        ADD COLUMN IF NOT EXISTS to_number text;
+      ALTER TABLE calls
+        ADD COLUMN IF NOT EXISTS has_recording boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS analysis jsonb;
+      CREATE TABLE IF NOT EXISTS webhook_deliveries (
+        id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id     uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        call_id       uuid NOT NULL,
+        event         text NOT NULL,
+        url           text NOT NULL,
+        attempts      integer NOT NULL DEFAULT 0,
+        status_code   integer,
+        error         text,
+        delivered_at  timestamptz,
+        created_at    timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS webhook_deliveries_call_idx ON webhook_deliveries(call_id, created_at);
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {

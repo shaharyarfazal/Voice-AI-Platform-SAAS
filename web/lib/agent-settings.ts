@@ -102,3 +102,29 @@ export function isValidTimezone(tz: string): boolean {
     return false;
   }
 }
+
+export const WEBHOOK_EVENTS = ["call_started", "call_ended", "call_analyzed"] as const;
+export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+export const AnalysisFieldSchema = z.object({
+  name: z.string().regex(/^[a-z][a-z0-9_]{0,39}$/, "Analysis field names use lowercase letters, numbers and underscores, like customer_name"),
+  type: z.enum(["string", "number", "boolean"]).default("string"),
+  description: z.string().trim().min(3, "Describe what each analysis field should contain").max(500),
+});
+export type AnalysisField = z.infer<typeof AnalysisFieldSchema>;
+
+export const PostCallSchema = z.object({
+  recordCalls: z.boolean().default(true),
+  /** Empty = no webhooks. Public https only. */
+  webhookUrl: z.string().trim().max(2000).default(""),
+  webhookEvents: z.array(z.enum(WEBHOOK_EVENTS)).default([...WEBHOOK_EVENTS]),
+  /** What counts as a successful call, for call_successful in the analysis. */
+  successCriteria: z.string().max(1000).default(""),
+  /** Extra values the AI pulls out of each call, e.g. customer_name. */
+  analysisFields: z.array(AnalysisFieldSchema).max(15).default([]),
+});
+export type PostCall = z.infer<typeof PostCallSchema>;
+
+export function parsePostCall(v: unknown): PostCall {
+  return PostCallSchema.parse(v ?? {});
+}

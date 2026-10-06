@@ -2,6 +2,7 @@ import "server-only";
 import { sql } from "@/lib/db";
 import { listElevenLabsVoices } from "@/lib/elevenlabs";
 import { getWorkerCapabilities } from "@/lib/settings";
+import { webhookSecret } from "@/lib/webhooks";
 import type { EditorContext } from "./types";
 
 export async function loadEditorContext(tenantId: string): Promise<EditorContext> {
@@ -16,5 +17,6 @@ export async function loadEditorContext(tenantId: string): Promise<EditorContext
     available: { stt: caps.stt, llm: caps.llm, tts: caps.tts },
     timezones: Intl.supportedValuesOf("timeZone"),
     elevenlabsVoices,
+    webhookSecret: webhookSecret(tenantId),
   };
 }

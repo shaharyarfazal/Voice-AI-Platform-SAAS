@@ -36,4 +36,6 @@ export type CallRow = {
   transcript: { role: "user" | "assistant" | "tool"; text: string; at: string }[];
   transcript_purged_at: Date | null;
   latency: import("@/components/latency").Latency;
+  has_recording: boolean;
+  analysis: import("./webhooks").CallAnalysis | null;
 };

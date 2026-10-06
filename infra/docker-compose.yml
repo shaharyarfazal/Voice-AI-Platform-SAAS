@@ -107,6 +107,8 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       # Lists ElevenLabs voices in the agent editor and checks voice IDs on save.
       ELEVEN_API_KEY: ${ELEVEN_API_KEY:-}
+    volumes:
+      - recordings:/data/recordings
 
   agent:
     build: ../agent
@@ -154,3 +156,4 @@ volumes:
   postgres-data:
   redis-data:
   caddy-data:
+  recordings:

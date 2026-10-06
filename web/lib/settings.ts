@@ -32,7 +32,7 @@ export type PlatformSettings = {
 // Provider prices change, so rates start at zero: enter your current prices in Admin > Settings.
 export const DEFAULT_SETTINGS: PlatformSettings = {
   allowSignup: process.env.ALLOW_SIGNUP !== "false",
-  disclosure: "This call is answered by an AI assistant and may be transcribed.",
+  disclosure: "This call is answered by an AI assistant and may be recorded.",
   safetyInstructions:
     "If the caller describes an emergency, such as a medical problem, a fire, a crime in progress or any danger to someone's life, " +
     "tell them to hang up and call their local emergency number (911 in the US, 112 in Europe) right away. " +

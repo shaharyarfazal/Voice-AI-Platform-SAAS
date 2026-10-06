@@ -13,6 +13,7 @@ import logging
 import math
 import os
 import re
+import uuid
 from datetime import datetime, timezone
 from typing import AsyncIterable
 from zoneinfo import ZoneInfo
@@ -33,6 +34,7 @@ from livekit.agents import (
 from livekit.plugins import silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
+from analysis import analyse_call, empty_analysis
 from providers import available_providers, build_llm, build_stt, build_tts
 from tools import build_mcp_servers, build_tools, describe_args
 
@@ -68,6 +70,22 @@ async def _post(path: str, payload: dict, timeout: float = 10.0) -> None:
             res.raise_for_status()
     except Exception:
         logger.exception("request to %s failed", path)
+
+
+async def upload_recording(call_id: str, path) -> None:
+    """Sends the call recording (Ogg/Opus) to the web app, which stores and serves it."""
+    try:
+        if not path.exists() or path.stat().st_size == 0:
+            return
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            res = await client.put(
+                f"{WEB_API_URL}/api/internal/recordings/{call_id}",
+                content=path.read_bytes(),
+                headers={**AUTH, "content-type": "audio/ogg"},
+            )
+            res.raise_for_status()
+    except Exception:
+        logger.exception("could not upload the recording for call %s", call_id)
 
 
 def summarize_usage(session: AgentSession) -> dict:
@@ -205,7 +223,8 @@ def prewarm(proc: JobProcess) -> None:
         logger.warning("could not report providers to the web app")
 
 
-server = AgentServer(setup_fnc=prewarm)
+# Calls end with uploading the recording and an AI analysis; give that time before the process is stopped.
+server = AgentServer(setup_fnc=prewarm, shutdown_process_timeout=60.0)
 
 
 @server.rtc_session(agent_name=AGENT_NAME)
@@ -234,13 +253,24 @@ async def entrypoint(ctx: JobContext) -> None:
         ctx.delete_room()
         return
 
+    call_id = str(uuid.uuid4())
+    post_call = config.get("postCall") or {}
+    record_calls = bool(post_call.get("recordCalls", False))
     started_at = _now()
     transcript: list[dict] = []
     userdata: dict = {"outcome": "caller_hung_up"}
     start_report = asyncio.create_task(
         _post(
             "/api/internal/calls/start",
-            {"roomName": ctx.room.name, "agentId": config["id"], "channel": channel, "fromNumber": caller_number},
+            {
+                "roomName": ctx.room.name,
+                "agentId": config["id"],
+                "callId": call_id,
+                "startedAt": started_at,
+                "channel": channel,
+                "fromNumber": caller_number,
+                "toNumber": called_number,
+            },
             timeout=5.0,
         )
     )
@@ -289,11 +319,16 @@ async def entrypoint(ctx: JobContext) -> None:
     async def _on_shutdown(reason: str) -> None:
         logger.info("call ended", extra={"room": ctx.room.name, "reason": reason, "turns": len(transcript)})
         await asyncio.gather(start_report, return_exceptions=True)  # end must not land before start
+        # The session is closed by now, so the recording file is complete. Upload it first so the
+        # call_ended webhook can include the link.
+        if record_calls:
+            await upload_recording(call_id, ctx.session_directory / "audio.ogg")
         await _post(
             "/api/internal/calls",
             {
                 "roomName": ctx.room.name,
                 "agentId": config["id"],
+                "callId": call_id,
                 "channel": channel,
                 "fromNumber": caller_number,
                 "toNumber": called_number,
@@ -305,6 +340,15 @@ async def entrypoint(ctx: JobContext) -> None:
                 "latency": latency.summary(),
             },
         )
+        fields = post_call.get("analysisFields") or []
+        try:
+            analysis = await asyncio.wait_for(
+                analyse_call(build_llm(llm_chain), transcript, post_call.get("successCriteria") or "", fields), timeout=30
+            )
+        except Exception:
+            logger.exception("post-call analysis failed")
+            analysis = empty_analysis(fields)
+        await _post("/api/internal/calls/analysis", {"callId": call_id, "analysis": analysis})
 
     ctx.add_shutdown_callback(_on_shutdown)
 
@@ -402,5 +446,7 @@ async def entrypoint(ctx: JobContext) -> None:
         mcp_servers=build_mcp_servers(config),
         blocked_phrases=guardrails.get("blockedPhrases") or [],
     )
-    await session.start(agent=agent, room=ctx.room)
+    # Recording is written locally (LiveKit Cloud upload is off: traces, logs and transcript are False).
+    record = {"audio": True, "traces": False, "logs": False, "transcript": False} if record_calls else False
+    await session.start(agent=agent, room=ctx.room, record=record)
     await session.say(config["greeting"], allow_interruptions=True)

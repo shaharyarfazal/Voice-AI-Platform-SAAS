@@ -10,13 +10,16 @@ import {
   isValidTimezone,
   McpServerSchema,
   parseTools,
+  PostCallSchema,
 } from "@/lib/agent-settings";
 import { requireSession } from "@/lib/auth";
 import { findProvider, LANGUAGES } from "@/lib/catalog";
 import { encrypt } from "@/lib/crypto";
 import { elevenLabsVoiceExists } from "@/lib/elevenlabs";
 import { sql } from "@/lib/db";
+import { assertPublicHttpsUrl } from "@/lib/net";
 import { isE164, isUuid } from "@/lib/validation";
+import { postWebhook, sampleCall, webhookSecret } from "@/lib/webhooks";
 
 export type AgentFormState = { error?: string; saved?: boolean } | undefined;
 
@@ -49,6 +52,7 @@ const Payload = z.object({
   }),
   booking: BookingSchema,
   guardrails: GuardrailsSchema,
+  postCall: PostCallSchema,
 });
 
 function issueMessage(e: z.ZodError): string {
@@ -79,6 +83,15 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
     if (!own) return { error: "Pick one of your connected calendars" };
   }
   if (a.tools.booking && !a.booking.integrationId) return { error: "Choose a calendar for booking, or turn booking off" };
+  if (a.postCall.webhookUrl) {
+    try {
+      await assertPublicHttpsUrl(a.postCall.webhookUrl);
+    } catch (e) {
+      return { error: `Webhook URL: ${(e as Error).message}` };
+    }
+  }
+  const fieldNames = a.postCall.analysisFields.map((f) => f.name);
+  if (new Set(fieldNames).size !== fieldNames.length) return { error: "Two analysis fields have the same name" };
   const tts = a.providers.tts;
   if (tts.provider === "elevenlabs" && tts.voice && !(await elevenLabsVoiceExists(tts.voice))) {
     return { error: `ElevenLabs has no voice "${tts.voice}" in your account. Pick one from the Voice list, or add it in ElevenLabs › Voice Library › Add to My Voices.` };
@@ -120,6 +133,7 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
     tools: sql.json(JSON.parse(JSON.stringify(tools))),
     booking: sql.json(a.booking),
     guardrails: sql.json(a.guardrails),
+    post_call: sql.json(a.postCall),
   };
 
   if (isUuid(id)) {
@@ -138,4 +152,16 @@ export async function deleteAgent(form: FormData) {
   const id = form.get("id")?.toString();
   if (isUuid(id)) await sql`DELETE FROM agents WHERE id = ${id} AND tenant_id = ${tenantId}`;
   redirect("/agents");
+}
+
+export type TestWebhookResult = { ok: boolean; message: string };
+
+/** Sends a sample call_ended payload to a webhook URL, so clients can map fields in n8n, Zapier, etc. */
+export async function sendTestWebhook(agentId: string | undefined, url: string): Promise<TestWebhookResult> {
+  const { tenantId } = await requireSession();
+  if (!url.trim()) return { ok: false, message: "Enter a webhook URL first." };
+  const [agent] = isUuid(agentId) ? await sql<{ name: string }[]>`SELECT name FROM agents WHERE id = ${agentId} AND tenant_id = ${tenantId}` : [];
+  const body = { event: "call_ended", test: true, call: sampleCall(agentId ?? "00000000-0000-0000-0000-000000000000", agent?.name ?? "Test agent") };
+  const result = await postWebhook(url.trim(), webhookSecret(tenantId), "call_ended", body, crypto.randomUUID());
+  return result.error ? { ok: false, message: result.error } : { ok: true, message: `Delivered (HTTP ${result.status}).` };
 }

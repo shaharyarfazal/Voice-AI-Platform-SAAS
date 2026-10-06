@@ -1,4 +1,4 @@
-import type { Booking, Guardrails } from "@/lib/agent-settings";
+import type { Booking, Guardrails, PostCall } from "@/lib/agent-settings";
 import type { AgentProviders } from "@/lib/catalog";
 
 export type EditorFunction = {
@@ -32,6 +32,7 @@ export type EditorState = {
   tools: { endCall: boolean; transferCall: boolean; booking: boolean; custom: EditorFunction[]; mcp: EditorMcp[] };
   booking: Booking;
   guardrails: Guardrails;
+  postCall: PostCall;
 };
 
 export type EditorContext = {
@@ -41,4 +42,6 @@ export type EditorContext = {
   timezones: string[];
   /** Voices in the platform's ElevenLabs account; null when unknown. */
   elevenlabsVoices: { id: string; name: string; category: string }[] | null;
+  /** Signs this client's webhooks. */
+  webhookSecret: string;
 };

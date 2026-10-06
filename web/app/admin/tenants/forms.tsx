@@ -77,7 +77,7 @@ export function ClientSettingsForm({ client }: { client: ClientFormValues }) {
           <input className="input" id="pricePerMinute" name="pricePerMinute" inputMode="decimal" defaultValue={client.price_per_minute} />
         </div>
         <div>
-          <label className="label" htmlFor="transcriptRetentionDays">Delete transcripts after (days)</label>
+          <label className="label" htmlFor="transcriptRetentionDays">Delete transcripts and recordings after (days)</label>
           <input
             className="input"
             id="transcriptRetentionDays"

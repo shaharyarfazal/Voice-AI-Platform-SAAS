@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { DAYS, type Day } from "@/lib/agent-settings";
+import { useActionState, useState, useTransition } from "react";
+import { DAYS, WEBHOOK_EVENTS, type AnalysisField, type Day, type PostCall, type WebhookEvent } from "@/lib/agent-settings";
 import { LANGUAGES, providersFor, type Role } from "@/lib/catalog";
-import { saveAgent } from "../actions";
+import { saveAgent, sendTestWebhook, type TestWebhookResult } from "../actions";
 import type { EditorContext, EditorFunction, EditorMcp, EditorState } from "./types";
 
 const TABS = [
@@ -12,6 +12,7 @@ const TABS = [
   { id: "tools", label: "Tools" },
   { id: "functions", label: "Custom functions & MCP" },
   { id: "guardrails", label: "Guardrails" },
+  { id: "after", label: "Recording & webhooks" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -91,6 +92,7 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
   const set = <K extends keyof EditorState>(key: K, value: EditorState[K]) => setS((prev) => ({ ...prev, [key]: value }));
   const setTools = (patch: Partial<EditorState["tools"]>) => setS((p) => ({ ...p, tools: { ...p.tools, ...patch } }));
   const setBooking = (patch: Partial<EditorState["booking"]>) => setS((p) => ({ ...p, booking: { ...p.booking, ...patch } }));
+  const setPostCall = (patch: Partial<PostCall>) => setS((p) => ({ ...p, postCall: { ...p.postCall, ...patch } }));
   const setGuard = (patch: Partial<EditorState["guardrails"]>) => setS((p) => ({ ...p, guardrails: { ...p.guardrails, ...patch } }));
 
   return (
@@ -263,6 +265,11 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
             <input className="input" id="silenceTimeoutSeconds" type="number" min={5} max={120} value={s.guardrails.silenceTimeoutSeconds} onChange={(e) => setGuard({ silenceTimeoutSeconds: Number(e.target.value) })} />
           </Field>
         </div>
+      </section>
+
+      {/* Recording & webhooks */}
+      <section hidden={tab !== "after"} className="space-y-6">
+        <PostCallSettings agentId={id} value={s.postCall} secret={context.webhookSecret} onChange={setPostCall} />
       </section>
 
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
@@ -550,5 +557,99 @@ function McpServers({ items, onChange }: { items: EditorMcp[]; onChange: (v: Edi
         + Add MCP server
       </button>
     </div>
+  );
+}
+
+const EVENT_INFO: Record<WebhookEvent, string> = {
+  call_started: "When the agent answers: call id, agent, direction, caller and dialled numbers.",
+  call_ended: "When the call ends: everything above plus duration, end reason, transcript and recording link.",
+  call_analyzed: "A few seconds later: everything in call_ended plus the AI summary, sentiment, success and your fields.",
+};
+
+function PostCallSettings({ agentId, value, secret, onChange }: { agentId?: string; value: PostCall; secret: string; onChange: (patch: Partial<PostCall>) => void }) {
+  const [test, setTest] = useState<TestWebhookResult | null>(null);
+  const [testing, startTest] = useTransition();
+  const [showSecret, setShowSecret] = useState(false);
+  const fields = value.analysisFields;
+  const updateField = (i: number, patch: Partial<AnalysisField>) => onChange({ analysisFields: fields.map((f, j) => (j === i ? { ...f, ...patch } : f)) });
+
+  return (
+    <>
+      <Toggle checked={value.recordCalls} onChange={(v) => onChange({ recordCalls: v })} title="Record calls">
+        Both sides of the call, playable on the call page and linked in webhooks. Recordings are deleted with transcripts at your retention period. Many places require telling callers they&apos;re being recorded; keep the AI disclosure on.
+      </Toggle>
+
+      <fieldset className="card space-y-4">
+        <legend className="px-1 text-sm font-medium">Webhooks</legend>
+        <Field label="Webhook URL" htmlFor="webhookUrl" hint="Public https address, e.g. an n8n, Make or Zapier webhook trigger. Leave empty for no webhooks.">
+          <div className="flex flex-wrap gap-2">
+            <input className="input flex-1" id="webhookUrl" value={value.webhookUrl} onChange={(e) => onChange({ webhookUrl: e.target.value })} placeholder="https://n8n.example.com/webhook/calls" />
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={testing || !value.webhookUrl.trim()}
+              onClick={() => startTest(async () => setTest(await sendTestWebhook(agentId, value.webhookUrl)))}
+            >
+              {testing ? "Sending…" : "Send test"}
+            </button>
+          </div>
+        </Field>
+        {test && (
+          <p className={`text-sm ${test.ok ? "text-good" : "text-critical"}`}>
+            {test.ok ? "✓" : "▲"} <span className="text-foreground">{test.ok ? `Test call_ended sent. ${test.message}` : `Test failed: ${test.message}`}</span>
+          </p>
+        )}
+        <div className="space-y-2">
+          {WEBHOOK_EVENTS.map((event) => (
+            <Toggle
+              key={event}
+              checked={value.webhookEvents.includes(event)}
+              onChange={(on) => onChange({ webhookEvents: on ? [...value.webhookEvents, event] : value.webhookEvents.filter((e) => e !== event) })}
+              title={event}
+            >
+              {EVENT_INFO[event]}
+            </Toggle>
+          ))}
+        </div>
+        <Field
+          label="Signing secret"
+          htmlFor="webhookSecret"
+          hint={<>Each request has an <code>x-webhook-signature</code> header: <code>v1=</code> + HMAC-SHA256 of <code>{"<x-webhook-timestamp>.<body>"}</code> with this secret. Check it to know the request came from us. Failed deliveries are retried twice.</>}
+        >
+          <div className="flex flex-wrap gap-2">
+            <input className="input flex-1 font-mono text-sm" id="webhookSecret" readOnly value={showSecret ? secret : "whsec_" + "•".repeat(24)} />
+            <button type="button" className="btn-secondary" onClick={() => setShowSecret((v) => !v)}>{showSecret ? "Hide" : "Show"}</button>
+          </div>
+        </Field>
+      </fieldset>
+
+      <fieldset className="card space-y-4">
+        <legend className="px-1 text-sm font-medium">Post-call analysis</legend>
+        <p className="text-sm text-muted">After every call the AI writes a summary and rates the caller&apos;s sentiment. It&apos;s shown on the call page and sent in call_analyzed.</p>
+        <Field label="A call is successful when" htmlFor="successCriteria" hint="Sets call_successful. Leave empty for: the caller got what they called for.">
+          <textarea className="input min-h-16" id="successCriteria" value={value.successCriteria} onChange={(e) => onChange({ successCriteria: e.target.value })} placeholder="An appointment was booked, or the caller's question was answered" />
+        </Field>
+        <div className="space-y-3">
+          <p className="label">Extra fields to pull out of each call</p>
+          {fields.map((f, i) => (
+            <div key={i} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto_2fr_auto]">
+              <input className="input font-mono text-sm" aria-label="Field name" value={f.name} onChange={(e) => updateField(i, { name: e.target.value })} placeholder="customer_name" />
+              <select className="input" aria-label="Field type" value={f.type} onChange={(e) => updateField(i, { type: e.target.value as AnalysisField["type"] })}>
+                <option value="string">Text</option>
+                <option value="number">Number</option>
+                <option value="boolean">Yes / no</option>
+              </select>
+              <input className="input" aria-label="What to extract" value={f.description} onChange={(e) => updateField(i, { description: e.target.value })} placeholder="The caller's full name" />
+              <button type="button" className="text-sm text-muted underline hover:text-critical" onClick={() => onChange({ analysisFields: fields.filter((_, j) => j !== i) })}>Remove</button>
+            </div>
+          ))}
+          {fields.length < 15 && (
+            <button type="button" className="btn-secondary" onClick={() => onChange({ analysisFields: [...fields, { name: "", type: "string", description: "" }] })}>
+              Add field
+            </button>
+          )}
+        </div>
+      </fieldset>
+    </>
   );
 }
