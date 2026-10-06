@@ -35,7 +35,8 @@ from livekit.plugins import silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from analysis import analyse_call, empty_analysis
-from providers import available_providers, build_llm, build_stt, build_tts
+from recording import to_mp3
+from providers import available_providers, build_llm, build_realtime, build_stt, build_tts
 from tools import build_mcp_servers, build_tools, describe_args
 
 load_dotenv()
@@ -73,15 +74,21 @@ async def _post(path: str, payload: dict, timeout: float = 10.0) -> None:
 
 
 async def upload_recording(call_id: str, path) -> None:
-    """Sends the call recording (Ogg/Opus) to the web app, which stores and serves it."""
+    """Converts the call recording to MP3 and sends it to the web app, which stores and serves it."""
     try:
         if not path.exists() or path.stat().st_size == 0:
             return
+        content_type = "audio/mpeg"
+        try:
+            path = await asyncio.to_thread(to_mp3, path, path.with_suffix(".mp3"))
+        except Exception:
+            logger.exception("MP3 conversion failed; uploading the original Ogg recording")
+            content_type = "audio/ogg"
         async with httpx.AsyncClient(timeout=60.0) as client:
             res = await client.put(
                 f"{WEB_API_URL}/api/internal/recordings/{call_id}",
                 content=path.read_bytes(),
-                headers={**AUTH, "content-type": "audio/ogg"},
+                headers={**AUTH, "content-type": content_type},
             )
             res.raise_for_status()
     except Exception:
@@ -290,22 +297,39 @@ async def entrypoint(ctx: JobContext) -> None:
     llm_chain = providers.get("llm") or [{"provider": "openai", "model": config.get("llmModel") or "gpt-4.1-mini"}]
     tts_chain = providers.get("tts") or [{"provider": "cartesia", "model": "sonic-3", "voice": config.get("voiceId")}]
 
+    realtime = config.get("mode") == "realtime"
+    if realtime:
+        # OpenAI Realtime listens, thinks and speaks; it also decides when the caller has finished.
+        models = {
+            "llm": build_realtime(config.get("realtime") or {}, language, noisy=noise_profile == "noisy", speed=speed),
+            "turn_handling": {"interruption": AUDIO_PROFILES[noise_profile]["interruption"]},
+        }
+    else:
+        models = {
+            "stt": build_stt(stt_chain, language, vad, isolate_voice=noise_profile == "noisy"),
+            "llm": build_llm(llm_chain),
+            "tts": build_tts(tts_chain, language),
+            "turn_handling": {
+                "turn_detection": MultilingualModel(),
+                "endpointing": RESPONSE_SPEED[speed],
+                "interruption": AUDIO_PROFILES[noise_profile]["interruption"],
+                # Start the reply while the end of the caller's turn is still being confirmed.
+                "preemptive_generation": {"enabled": True},
+            },
+        }
     session: AgentSession = AgentSession(
         userdata=userdata,
         vad=vad,
-        stt=build_stt(stt_chain, language, vad, isolate_voice=noise_profile == "noisy"),
-        llm=build_llm(llm_chain),
-        tts=build_tts(tts_chain, language),
-        turn_handling={
-            "turn_detection": MultilingualModel(),
-            "endpointing": RESPONSE_SPEED[speed],
-            "interruption": AUDIO_PROFILES[noise_profile]["interruption"],
-            # Start the reply while the end of the caller's turn is still being confirmed.
-            "preemptive_generation": {"enabled": True},
-        },
         user_away_timeout=float(guardrails.get("silenceTimeoutSeconds") or 20),
         max_tool_steps=4,
+        **models,
     )
+
+    def speak(text: str, *, allow_interruptions: bool = True):
+        """Says fixed text. Realtime models have no text-to-speech, so they're asked to say it word for word."""
+        if realtime:
+            return session.generate_reply(instructions=f'Say exactly this, word for word, and nothing else: "{text}"')
+        return session.say(text, allow_interruptions=allow_interruptions, add_to_chat_ctx=False)
 
     latency = LatencyTracker()
 
@@ -360,7 +384,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
     async def _say_and_hang_up(text: str, reason: str) -> None:
         try:
-            handle = session.say(text, allow_interruptions=False, add_to_chat_ctx=False)
+            handle = speak(text, allow_interruptions=False)
             await asyncio.wait_for(handle.wait_for_playout(), timeout=15)
         except Exception:
             logger.exception("could not play the closing message")
@@ -401,7 +425,7 @@ async def entrypoint(ctx: JobContext) -> None:
             return
         if not asked_if_there:
             asked_if_there = True
-            session.say(STILL_THERE, add_to_chat_ctx=False)
+            speak(STILL_THERE)
         else:
             userdata["outcome"] = "silence_timeout"
             asyncio.create_task(_say_and_hang_up("I'll let you go now. Feel free to call back any time. Goodbye.", "silence"))
@@ -449,4 +473,7 @@ async def entrypoint(ctx: JobContext) -> None:
     # Recording is written locally (LiveKit Cloud upload is off: traces, logs and transcript are False).
     record = {"audio": True, "traces": False, "logs": False, "transcript": False} if record_calls else False
     await session.start(agent=agent, room=ctx.room, record=record)
-    await session.say(config["greeting"], allow_interruptions=True)
+    if realtime:
+        await speak(config["greeting"])
+    else:
+        await session.say(config["greeting"], allow_interruptions=True)

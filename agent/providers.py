@@ -145,3 +145,26 @@ def build_tts(chain: list[dict], language: str) -> tts.TTS:
     # Switch to the next voice on the first failure: retrying a broken voice (e.g. a wrong voice
     # ID) left the caller in silence for several seconds per reply.
     return items[0] if len(items) == 1 else tts.FallbackAdapter(items, max_retry_per_tts=0)
+
+
+# Realtime turn-taking: how readily OpenAI decides the caller has finished.
+REALTIME_EAGERNESS = {"fast": "high", "balanced": "auto", "patient": "low"}
+
+
+def build_realtime(choice: dict, language: str, *, noisy: bool, speed: str):
+    """OpenAI Realtime: one speech-to-speech model that hears the caller and answers in its own voice."""
+    from openai.types.realtime import AudioTranscription
+    from openai.types.realtime.realtime_audio_input_turn_detection import SemanticVad
+
+    lang = None if language == "multi" else base_language(language)
+    return openai.realtime.RealtimeModel(
+        model=choice.get("model") or "gpt-realtime",
+        voice=choice.get("voice") or "marin",
+        # Transcribes the caller for the call log (the model itself listens to the audio).
+        input_audio_transcription=AudioTranscription(model="gpt-4o-mini-transcribe", language=lang),
+        # Phone audio held at a distance in noisy places; close-talking otherwise.
+        input_audio_noise_reduction="far_field" if noisy else "near_field",
+        turn_detection=SemanticVad(
+            type="semantic_vad", eagerness=REALTIME_EAGERNESS.get(speed, "auto"), create_response=True, interrupt_response=True
+        ),
+    )

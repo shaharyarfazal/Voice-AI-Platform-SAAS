@@ -37,7 +37,13 @@ const Payload = z.object({
   systemPrompt: z.string().trim().min(1, "Instructions can't be empty").max(20000),
   announceAi: z.boolean(),
   language: z.string().refine((l) => LANGUAGES.some((x) => x.code === l), "Pick a language"),
-  providers: z.object({ stt: Choice("stt"), llm: Choice("llm"), tts: Choice("tts") }),
+  providers: z.object({
+    mode: z.enum(["pipeline", "realtime"]).default("pipeline"),
+    stt: Choice("stt"),
+    llm: Choice("llm"),
+    tts: Choice("tts"),
+    realtime: z.object({ model: z.string().trim().min(1, "Pick a Realtime model").max(100), voice: z.string().trim().min(1).max(50) }),
+  }),
   transferNumber: z
     .string()
     .trim()
@@ -93,7 +99,7 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
   const fieldNames = a.postCall.analysisFields.map((f) => f.name);
   if (new Set(fieldNames).size !== fieldNames.length) return { error: "Two analysis fields have the same name" };
   const tts = a.providers.tts;
-  if (tts.provider === "elevenlabs" && tts.voice && !(await elevenLabsVoiceExists(tts.voice))) {
+  if (a.providers.mode === "pipeline" && tts.provider === "elevenlabs" && tts.voice && !(await elevenLabsVoiceExists(tts.voice))) {
     return { error: `ElevenLabs has no voice "${tts.voice}" in your account. Pick one from the Voice list, or add it in ElevenLabs › Voice Library › Add to My Voices.` };
   }
 

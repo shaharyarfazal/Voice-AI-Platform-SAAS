@@ -69,16 +69,20 @@ Unit tests: `cd web && npm test`.
 
 ## What clients can configure per agent
 
-- **Voice & language:** 27 languages or multilingual auto-detect; the LLM (OpenAI, Claude, Gemini,
-  Groq), speech recognition (Deepgram, AssemblyAI, ElevenLabs Scribe, OpenAI) and voice (Cartesia, ElevenLabs,
-  OpenAI, Deepgram). Every other provider with an API key is an automatic fallback.
+- **Voice & language:** 27 languages or multilingual auto-detect, picked from searchable lists.
+  Standard mode: the LLM (OpenAI, Claude, Gemini, Groq), speech recognition (Deepgram, AssemblyAI,
+  ElevenLabs Scribe, OpenAI) and voice (Cartesia, ElevenLabs, OpenAI, Deepgram), with every other
+  provider that has an API key as an automatic fallback. The model and voice lists come live from each
+  provider's API (your ElevenLabs and Cartesia voice libraries included), with curated, annotated
+  defaults. OpenAI Realtime mode: one speech-to-speech model with OpenAI's voices.
+- **Test calls** from the browser show a live transcript as you talk.
 - **Tools:** end call, transfer to a person, check availability and book appointments in a
   connected Google or Outlook calendar.
 - **Custom functions and MCP servers:** call the client's own systems during a call.
   Only public https addresses are allowed; credentials are stored encrypted.
 - **Guardrails:** allowed topics, forbidden topics, blocked words, maximum call length, silence
   timeout. Platform-wide rules (no prompt leaks, no made-up facts, emergencies to 911/112) always apply.
-- **Recording & webhooks:** call recording, `call_started` / `call_ended` / `call_analyzed`
+- **Recording & webhooks:** call recording (MP3), `call_started` / `call_ended` / `call_analyzed`
   webhooks (signed, with transcript and recording link), and post-call analysis: summary,
   sentiment, success, and custom fields to extract. See [docs/webhooks.md](docs/webhooks.md).
 - **Call audio:** "noisy places" mode (stricter voice detection, a few words needed to interrupt,

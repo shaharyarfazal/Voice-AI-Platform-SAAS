@@ -3,19 +3,22 @@ import { mkdir, rename, unlink } from "node:fs/promises";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { isInternalRequest } from "@/lib/auth";
-import { RECORDINGS_DIR, recordingPath } from "@/lib/recordings";
+import { deleteRecording, RECORDINGS_DIR, recordingPath } from "@/lib/recordings";
 import { isUuid } from "@/lib/validation";
 
-const MAX_BYTES = 200 * 1024 * 1024; // about 14 hours of Opus audio
+const MAX_BYTES = 200 * 1024 * 1024; // about 7 hours of 64 kbps MP3
 
-// The agent worker uploads the call recording (Ogg/Opus) here before reporting the call's end.
+// The agent worker uploads the call recording (MP3, or Ogg if conversion failed) here before
+// reporting the call's end.
 export async function PUT(request: Request, { params }: RouteContext<"/api/internal/recordings/[id]">) {
   if (!isInternalRequest(request)) return new Response("Unauthorized", { status: 401 });
   const { id } = await params;
   if (!isUuid(id) || !request.body) return new Response("Bad request", { status: 400 });
 
+  const format = request.headers.get("content-type")?.startsWith("audio/ogg") ? "ogg" : "mp3";
   await mkdir(RECORDINGS_DIR, { recursive: true });
-  const final = recordingPath(id);
+  await deleteRecording(id); // a retried upload may arrive in the other format
+  const final = recordingPath(id, format);
   const partial = `${final}.part`;
   let size = 0;
   const limit = new Transform({

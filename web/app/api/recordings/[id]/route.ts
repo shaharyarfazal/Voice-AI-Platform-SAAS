@@ -1,9 +1,8 @@
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { recordingPath, verifyRecordingSignature } from "@/lib/recordings";
+import { findRecording, FORMATS, verifyRecordingSignature } from "@/lib/recordings";
 import { isUuid } from "@/lib/validation";
 
 // Call recording download. Works with the signed link from a webhook (no sign-in), or for a
@@ -25,18 +24,15 @@ export async function GET(request: Request, { params }: RouteContext<"/api/recor
 
   const [call] = await sql<{ has_recording: boolean }[]>`SELECT has_recording FROM calls WHERE id = ${id}`;
   if (!call?.has_recording) return new Response("Not found", { status: 404 });
-  let size: number;
-  try {
-    size = (await stat(recordingPath(id))).size;
-  } catch {
-    return new Response("Not found", { status: 404 });
-  }
-  const stream = Readable.toWeb(createReadStream(recordingPath(id))) as ReadableStream;
+  const file = await findRecording(id);
+  if (!file) return new Response("Not found", { status: 404 });
+  const stream = Readable.toWeb(createReadStream(file.path)) as ReadableStream;
   return new Response(stream, {
     headers: {
-      "content-type": "audio/ogg",
-      "content-length": String(size),
-      "content-disposition": `${searchParams.get("download") === "1" ? "attachment" : "inline"}; filename="call-${id}.ogg"`,
+      "content-type": FORMATS[file.format],
+      "content-length": String(file.size),
+      "accept-ranges": "none",
+      "content-disposition": `${searchParams.get("download") === "1" ? "attachment" : "inline"}; filename="call-${id}.${file.format}"`,
       "cache-control": "private, no-store",
     },
   });

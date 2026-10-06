@@ -4,25 +4,39 @@ import { stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { publicUrl } from "./oauth";
 
-// Call recordings are Ogg/Opus files written by the agent worker and stored on the web server's disk.
+// Call recordings are MP3 files (Ogg/Opus for calls recorded before MP3 support) uploaded by the
+// agent worker and stored on the web server's disk.
 export const RECORDINGS_DIR = process.env.RECORDINGS_DIR || path.join(process.cwd(), "recordings");
 /** How long a recording link in a webhook stays valid. */
 export const RECORDING_LINK_DAYS = 7;
 
-export function recordingPath(callId: string): string {
-  return path.join(RECORDINGS_DIR, `${callId}.ogg`);
+export const FORMATS = { mp3: "audio/mpeg", ogg: "audio/ogg" } as const;
+export type RecordingFormat = keyof typeof FORMATS;
+
+export function recordingPath(callId: string, format: RecordingFormat): string {
+  return path.join(RECORDINGS_DIR, `${callId}.${format}`);
+}
+
+/** The stored recording, if any: MP3 first, then the older Ogg format. */
+export async function findRecording(callId: string): Promise<{ path: string; format: RecordingFormat; size: number } | null> {
+  for (const format of Object.keys(FORMATS) as RecordingFormat[]) {
+    const file = recordingPath(callId, format);
+    try {
+      const { size } = await stat(file);
+      if (size > 0) return { path: file, format, size };
+    } catch {
+      // try the next format
+    }
+  }
+  return null;
 }
 
 export async function recordingExists(callId: string): Promise<boolean> {
-  try {
-    return (await stat(recordingPath(callId))).size > 0;
-  } catch {
-    return false;
-  }
+  return (await findRecording(callId)) !== null;
 }
 
 export async function deleteRecording(callId: string): Promise<void> {
-  await unlink(recordingPath(callId)).catch(() => {});
+  for (const format of Object.keys(FORMATS) as RecordingFormat[]) await unlink(recordingPath(callId, format)).catch(() => {});
 }
 
 function signature(callId: string, expires: number): string {

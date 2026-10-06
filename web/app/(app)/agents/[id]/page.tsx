@@ -31,7 +31,7 @@ export default async function AgentPage({ params }: PageProps<"/agents/[id]">) {
           <h1 className="page-title mt-1">{agent.name}</h1>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="badge">{languageLabel(initial.language)}</span>
-            <span className="badge">{initial.providers.llm.model}</span>
+            <span className="badge">{initial.providers.mode === "realtime" ? `Realtime · ${initial.providers.realtime.model}` : initial.providers.llm.model}</span>
             <span className="badge">{numbers.n} phone number{numbers.n === 1 ? "" : "s"}</span>
             {initial.tools.booking && <span className="badge">Booking on</span>}
             {initial.tools.custom.length + initial.tools.mcp.length > 0 && (

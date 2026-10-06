@@ -34,7 +34,7 @@ export default async function CallPage({ params }: PageProps<"/calls/[id]">) {
         <section className="card space-y-2">
           <h2 className="text-sm font-medium">Recording</h2>
           <audio controls preload="none" src={`/api/recordings/${call.id}`} className="w-full" />
-          <a href={`/api/recordings/${call.id}?download=1`} className="text-sm text-muted underline">Download (.ogg)</a>
+          <a href={`/api/recordings/${call.id}?download=1`} className="text-sm text-muted underline">Download MP3</a>
         </section>
       )}
       {a && (

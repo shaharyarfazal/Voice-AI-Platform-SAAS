@@ -2,7 +2,8 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { DAYS, WEBHOOK_EVENTS, type AnalysisField, type Day, type PostCall, type WebhookEvent } from "@/lib/agent-settings";
-import { LANGUAGES, providersFor, type Role } from "@/lib/catalog";
+import { Combobox } from "@/components/combobox";
+import { languageLabel, LANGUAGES, providersFor, type Choice, type Role } from "@/lib/catalog";
 import { saveAgent, sendTestWebhook, type TestWebhookResult } from "../actions";
 import type { EditorContext, EditorFunction, EditorMcp, EditorState } from "./types";
 
@@ -38,7 +39,7 @@ function Toggle({ checked, onChange, title, children }: { checked: boolean; onCh
 
 function Field({ label, hint, children, htmlFor }: { label: string; hint?: React.ReactNode; children: React.ReactNode; htmlFor?: string }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="label" htmlFor={htmlFor}>{label}</label>
       {children}
       {hint && <p className="hint">{hint}</p>}
@@ -147,25 +148,7 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
 
       {/* Voice & language */}
       <section hidden={tab !== "voice"} className="space-y-6">
-        <Field label="Language" htmlFor="language" hint="Speech recognition, the AI and the voice all use this language. Multilingual follows the caller.">
-          <select className="input" id="language" value={s.language} onChange={(e) => set("language", e.target.value)}>
-            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-          </select>
-        </Field>
-        {(["llm", "stt", "tts"] as Role[]).map((role) => (
-          <ProviderPicker
-            key={role}
-            role={role}
-            value={s.providers[role]}
-            available={context.available[role]}
-            language={s.language}
-            elevenlabsVoices={context.elevenlabsVoices}
-            onChange={(v) => set("providers", { ...s.providers, [role]: v })}
-          />
-        ))}
-        <p className="rounded-lg bg-surface p-3 text-sm text-muted">
-          Automatic fallback: if your chosen provider fails during a call, the agent switches to the next provider with an API key and keeps talking.
-        </p>
+        <VoiceSettings s={s} context={context} set={set} />
 
         <fieldset className="card space-y-4">
           <legend className="px-1 text-sm font-medium">Call audio</legend>
@@ -281,77 +264,201 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
   );
 }
 
+const LANGUAGE_CHOICES: Choice[] = LANGUAGES.map((l) => ({ value: l.code, label: l.label, hint: l.code === "multi" ? "Answers in whatever language the caller speaks" : undefined }));
+
+const ROLE_INFO: Record<Role, { title: string; about: string }> = {
+  llm: { title: "AI model", about: "Understands the caller and decides what to say and do." },
+  tts: { title: "Voice", about: "How the agent sounds." },
+  stt: { title: "Speech recognition", about: "Turns the caller's speech into text." },
+};
+
+function VoiceSettings({ s, context, set }: { s: EditorState; context: EditorContext; set: <K extends keyof EditorState>(key: K, value: EditorState[K]) => void }) {
+  const providers = s.providers;
+  const setProviders = (patch: Partial<EditorState["providers"]>) => set("providers", { ...providers, ...patch });
+  const realtimeAvailable = context.available.llm.includes("openai");
+  const realtime = providers.mode === "realtime";
+
+  return (
+    <>
+      <Field label="Language" htmlFor="language" hint="Speech recognition, the AI and the voice all use this language.">
+        <Combobox id="language" value={s.language} options={LANGUAGE_CHOICES} onChange={(v) => set("language", v)} searchPlaceholder="Search languages" />
+      </Field>
+
+      <div>
+        <p className="label">How the agent listens and speaks</p>
+        <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Voice pipeline">
+          {(
+            [
+              ["pipeline", "Standard", "Speech recognition → AI model → voice. Mix providers (Claude, Gemini, ElevenLabs, Cartesia…) with automatic fallback if one fails."],
+              ["realtime", "OpenAI Realtime", "One speech-to-speech model hears the caller and answers in its own voice. The most natural turn-taking; OpenAI voices only, no fallback."],
+            ] as const
+          ).map(([value, title, body]) => (
+            <label key={value} className={`toggle-row ${providers.mode === value ? "border-accent bg-accent/5" : ""}`}>
+              <input type="radio" name="mode" className="mt-1 accent-[var(--accent)]" checked={providers.mode === value} onChange={() => setProviders({ mode: value })} />
+              <span>
+                <span className="block text-sm font-medium">{title}</span>
+                <span className="mt-0.5 block text-sm text-muted">{body}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {realtime ? (
+        <fieldset className="card space-y-4">
+          <legend className="px-1 text-sm font-medium">OpenAI Realtime</legend>
+          {!realtimeAvailable && <Warning>The agent server has no OpenAI API key, so calls can&apos;t use Realtime. Add OPENAI_API_KEY to infra/.env.</Warning>}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Model" htmlFor="realtime-model">
+              <Combobox
+                id="realtime-model"
+                value={providers.realtime.model}
+                options={context.catalog.realtime.models}
+                onChange={(model) => setProviders({ realtime: { ...providers.realtime, model } })}
+                allowCustom
+                customNoun="model name"
+                searchPlaceholder="Search models"
+              />
+            </Field>
+            <Field label="Voice" htmlFor="realtime-voice">
+              <Combobox
+                id="realtime-voice"
+                value={providers.realtime.voice}
+                options={context.catalog.realtime.voices}
+                onChange={(voice) => setProviders({ realtime: { ...providers.realtime, voice } })}
+                searchPlaceholder="Search voices"
+              />
+            </Field>
+          </div>
+          <p className="hint">Blocked words and the speech-recognition and voice settings below don&apos;t apply in Realtime mode. Call transcripts still work.</p>
+        </fieldset>
+      ) : (
+        (["llm", "tts", "stt"] as Role[]).map((role) => (
+          <ProviderPicker
+            key={role}
+            role={role}
+            value={providers[role]}
+            available={context.available[role]}
+            language={s.language}
+            catalog={context.catalog}
+            onChange={(v) => setProviders({ [role]: v })}
+          />
+        ))
+      )}
+      {!realtime && (
+        <p className="rounded-lg bg-surface p-3 text-sm text-muted">
+          Automatic fallback: if a provider fails during a call, the agent switches to the next provider with an API key and keeps talking.
+        </p>
+      )}
+    </>
+  );
+}
+
+function Warning({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-critical">▲ <span className="text-foreground">{children}</span></p>;
+}
+
 function ProviderPicker({
   role,
   value,
   available,
   language,
-  elevenlabsVoices,
+  catalog,
   onChange,
 }: {
   role: Role;
   value: { provider: string; model: string; voice?: string };
   available: string[];
   language: string;
-  elevenlabsVoices: EditorContext["elevenlabsVoices"];
+  catalog: EditorContext["catalog"];
   onChange: (v: { provider: string; model: string; voice?: string }) => void;
 }) {
-  const options = providersFor(role);
+  const options = providersFor(role).filter((o) => o.id !== "custom");
   const current = options.find((o) => o.id === value.provider);
-  const title = { llm: "AI model (LLM)", stt: "Speech recognition", tts: "Voice" }[role];
   const englishOnly = current && !current.multilingual && !language.startsWith("en");
-  const voiceList = role === "tts" && current?.id === "elevenlabs" ? elevenlabsVoices : null;
-  const knownVoice = voiceList?.find((v) => v.id === value.voice);
+  const models = catalog.models[role][value.provider] ?? current?.models ?? [];
+  const voices = catalog.voices[value.provider] ?? [];
+  // Deepgram Aura's voice is its model, so it shows one "Voice" dropdown.
+  const voiceIsModel = role === "tts" && value.provider === "deepgram";
+  const [previewing, setPreviewing] = useState<HTMLAudioElement | null>(null);
+  const previewUrl = voices.find((v) => v.value === value.voice)?.previewUrl;
+
+  function preview() {
+    previewing?.pause();
+    if (!previewUrl) return;
+    const audio = new Audio(previewUrl);
+    audio.onended = () => setPreviewing(null);
+    void audio.play();
+    setPreviewing(audio);
+  }
+
   return (
     <fieldset className="card space-y-4">
-      <legend className="px-1 text-sm font-medium">{title}</legend>
+      <legend className="px-1 text-sm font-medium">{ROLE_INFO[role].title}</legend>
+      <p className="-mt-2 text-sm text-muted">{ROLE_INFO[role].about}</p>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={`${ROLE_INFO[role].title} provider`}>
+        {options.map((o) => {
+          const keyed = available.includes(o.id);
+          const selected = o.id === value.provider;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={!keyed && !selected}
+              title={keyed ? undefined : "No API key for this provider on the server"}
+              onClick={() => onChange({ provider: o.id, model: o.defaultModel, ...(role === "tts" ? { voice: o.defaultVoice ?? "" } : {}) })}
+              className={`rounded-full border px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                selected ? "border-accent bg-accent/10 font-medium text-foreground" : "border-border text-muted hover:border-foreground/30 hover:text-foreground"
+              }`}
+            >
+              {o.label}
+              {!keyed && <span className="ml-1 text-xs">(no key)</span>}
+            </button>
+          );
+        })}
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Provider" htmlFor={`${role}-provider`}>
-          <select
-            className="input"
-            id={`${role}-provider`}
-            value={value.provider}
-            onChange={(e) => {
-              const next = options.find((o) => o.id === e.target.value)!;
-              onChange({ provider: next.id, model: next.defaultModel, ...(role === "tts" ? { voice: next.defaultVoice ?? "" } : {}) });
-            }}
-          >
-            {options.map((o) => (
-              <option key={o.id} value={o.id} disabled={!available.includes(o.id) && o.id !== value.provider}>
-                {o.label}{available.includes(o.id) ? "" : " (no API key)"}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Model" htmlFor={`${role}-model`}>
-          <input className="input" id={`${role}-model`} list={`${role}-models`} value={value.model} onChange={(e) => onChange({ ...value, model: e.target.value })} />
-          <datalist id={`${role}-models`}>{current?.models.map((m) => <option key={m} value={m} />)}</datalist>
-        </Field>
-        {role === "tts" && current?.id !== "deepgram" && (
-          <Field label="Voice" htmlFor="tts-voice" hint={current?.voiceHint}>
-            <input className="input" id="tts-voice" list={voiceList ? "tts-voices" : undefined} value={value.voice ?? ""} onChange={(e) => onChange({ ...value, voice: e.target.value.trim() })} />
-            {voiceList && (
-              <datalist id="tts-voices">
-                {voiceList.map((v) => <option key={v.id} value={v.id} label={`${v.name}${v.category ? ` (${v.category})` : ""}`} />)}
-              </datalist>
-            )}
+        {role === "tts" && !voiceIsModel && (
+          <Field label="Voice" htmlFor="tts-voice" hint={voices.length > 1 ? `${voices.length} voices. Or paste any voice ID.` : "Paste a voice ID from your provider account."}>
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <Combobox
+                  id="tts-voice"
+                  value={value.voice ?? ""}
+                  options={voices}
+                  onChange={(voice) => onChange({ ...value, voice })}
+                  allowCustom
+                  customNoun="voice ID"
+                  searchPlaceholder="Search voices, accents, languages"
+                />
+              </div>
+              {previewUrl && (
+                <button type="button" className="btn-secondary px-3" onClick={preview} aria-label="Play a sample of this voice">
+                  {previewing ? "■" : "▶"}
+                </button>
+              )}
+            </div>
           </Field>
         )}
+        <Field label={voiceIsModel ? "Voice" : "Model"} htmlFor={`${role}-model`}>
+          <Combobox
+            id={`${role}-model`}
+            value={value.model}
+            options={models}
+            onChange={(model) => onChange({ ...value, model })}
+            allowCustom
+            customNoun="model name"
+            searchPlaceholder={voiceIsModel ? "Search voices" : "Search models"}
+          />
+        </Field>
       </div>
-      {!available.includes(value.provider) && (
-        <p className="text-sm text-critical">▲ <span className="text-foreground">No API key for this provider on the server, so the first available one is used instead.</span></p>
-      )}
+      {!available.includes(value.provider) && <Warning>No API key for this provider on the server, so the first available one is used instead.</Warning>}
       {current?.streaming === false && (
-        <p className="text-sm text-muted">This provider transcribes after the caller finishes speaking, so replies are slower. Prefer Deepgram or AssemblyAI for phone calls.</p>
+        <p className="text-sm text-muted">This provider transcribes after the caller finishes speaking, so replies are slower. Prefer Deepgram, AssemblyAI or ElevenLabs Scribe for phone calls.</p>
       )}
-      {voiceList && value.voice && (knownVoice ? (
-        <p className="text-sm text-muted">Voice: {knownVoice.name}</p>
-      ) : (
-        <p className="text-sm text-critical">▲ <span className="text-foreground">This voice isn&apos;t in your ElevenLabs My Voices. If saving fails, pick one from the list, or add it in ElevenLabs › Voice Library › Add to My Voices.</span></p>
-      ))}
-      {englishOnly && (
-        <p className="text-sm text-critical">▲ <span className="text-foreground">This voice only speaks English; pick another for {language}.</span></p>
-      )}
+      {englishOnly && <Warning>This voice only speaks English; pick another provider for {languageLabel(language)}.</Warning>}
     </fieldset>
   );
 }

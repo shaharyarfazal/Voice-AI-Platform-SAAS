@@ -50,7 +50,7 @@ dashboard test calls (`"web"`); outbound calls will use `"outbound"` once outbou
 - `end_reason`: `caller_hung_up`, `completed` (the agent ended the call), `transferred`,
   `silence_timeout`, `time_limit` or `error`.
 - `recording_url` is `null` when recording is off. The link works without signing in for 7 days;
-  add `&download=1` to get it as a file download. The file is Ogg/Opus, caller and agent in stereo.
+  add `&download=1` to get it as a file download. The file is an MP3 (64 kbps stereo, about 0.5 MB per minute) with both sides of the call.
 - `call_analysis` is `null` in `call_ended`. `user_sentiment` is `positive`, `neutral`, `negative`
   or `unknown`; `call_successful` is `null` when there was nothing to judge (e.g. a silent call).
   `custom_data` has one key per analysis field you defined, `null` when the call didn't say.

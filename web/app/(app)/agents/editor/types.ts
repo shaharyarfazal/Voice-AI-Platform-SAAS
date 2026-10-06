@@ -40,8 +40,8 @@ export type EditorContext = {
   /** Providers with API keys on the agent worker. */
   available: { stt: string[]; llm: string[]; tts: string[] };
   timezones: string[];
-  /** Voices in the platform's ElevenLabs account; null when unknown. */
-  elevenlabsVoices: { id: string; name: string; category: string }[] | null;
+  /** Models and voices offered in the dropdowns. */
+  catalog: import("@/lib/provider-catalog").ProviderCatalog;
   /** Signs this client's webhooks. */
   webhookSecret: string;
 };

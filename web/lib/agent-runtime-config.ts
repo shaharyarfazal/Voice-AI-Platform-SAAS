@@ -92,6 +92,9 @@ export async function buildRuntimeConfig(row: FullAgentRow) {
     language,
     timezone: booking.timezone,
     providers: chains(caps),
+    // "realtime": OpenAI Realtime replaces speech recognition, the LLM and the voice.
+    mode: providers.mode,
+    realtime: providers.realtime,
     tools: {
       endCall: tools.endCall,
       transferCall: tools.transferCall && Boolean(row.transfer_number),
