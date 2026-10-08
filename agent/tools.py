@@ -80,7 +80,12 @@ def build_tools(
             await context.wait_for_playout()
             session_userdata["outcome"] = "completed"
             log_tool("end_call", {}, "call ended")
-            get_job_context().delete_room()
+            job = get_job_context()
+            try:
+                await asyncio.wait_for(job.room.local_participant.set_attributes({"end_reason": "completed"}), timeout=1.5)
+            except Exception:
+                pass
+            job.delete_room()
 
         tools.append(end_call)
 

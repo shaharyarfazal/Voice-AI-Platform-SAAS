@@ -434,8 +434,17 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(_on_shutdown)
 
-    async def _end_call(reason: str) -> None:
+    async def announce_end_reason(reason: str) -> None:
+        """Tells the browser why the call is ending, so the test-call screen can say so."""
         try:
+            await asyncio.wait_for(ctx.room.local_participant.set_attributes({"end_reason": reason}), timeout=1.5)
+        except Exception:
+            pass
+
+    async def _end_call(reason: str) -> None:
+        logger.info("agent is ending the call", extra={"room": ctx.room.name, "reason": reason})
+        try:
+            await announce_end_reason(reason)
             await ctx.delete_room()
         finally:
             ctx.shutdown(reason=reason)

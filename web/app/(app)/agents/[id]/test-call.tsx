@@ -32,6 +32,15 @@ const END_REASON: Partial<Record<DisconnectReason, string>> = {
   [DisconnectReason.JOIN_FAILURE]: "Couldn't join the call. Try again.",
 };
 
+/** Why the agent hung up, as it tells the room just before leaving. */
+const AGENT_END_REASON: Record<string, string> = {
+  completed: "The agent ended the call after saying goodbye.",
+  silence: "The agent hung up because it didn't hear you for a while (silence timeout, set on the agent's Call settings).",
+  time_limit: "The call reached the agent's maximum call length.",
+  error:
+    "The agent ended the call because an AI provider failed (language model, voice or speech recognition). The call's page under Calls shows which one.",
+};
+
 function newRoom() {
   return new Room({
     adaptiveStream: true,
@@ -90,13 +99,20 @@ export function TestCall({ agentId }: { agentId: string }) {
   const [endReason, setEndReason] = useState<string | null>(null);
 
   useEffect(() => {
+    let agentReason: string | null = null;
+    const onAttributes = (changed: Record<string, string>) => {
+      if (changed.end_reason) agentReason = changed.end_reason;
+    };
     const onDisconnected = (reason?: DisconnectReason) => {
       setStatus((s) => (s === "live" ? "ended" : s));
-      setEndReason(reason === undefined ? null : (END_REASON[reason] ?? `Disconnected (${DisconnectReason[reason] ?? reason}).`));
+      if (agentReason) setEndReason(AGENT_END_REASON[agentReason] ?? `The agent ended the call (${agentReason}).`);
+      else setEndReason(reason === undefined ? null : (END_REASON[reason] ?? `Disconnected (${DisconnectReason[reason] ?? reason}).`));
     };
+    room.on(RoomEvent.ParticipantAttributesChanged, onAttributes);
     room.on(RoomEvent.Disconnected, onDisconnected);
     return () => {
       room.off(RoomEvent.Disconnected, onDisconnected);
+      room.off(RoomEvent.ParticipantAttributesChanged, onAttributes);
     };
   }, [room]);
 
