@@ -40,6 +40,20 @@ if (( ${#v4[@]} + ${#v6[@]} == 0 )); then
   exit 1
 fi
 
+# Servers that use ufw: add the rules there (installing iptables-persistent would remove ufw).
+if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
+  remove
+  for p in udp tcp; do
+    ufw --force delete allow "$PORT/$p" >/dev/null 2>&1 || true
+    ufw --force delete allow "$PORT" >/dev/null 2>&1 || true
+    ufw --force delete deny "$PORT/$p" >/dev/null 2>&1 || true  # re-added last, after the allows
+    for ip in "${v4[@]}" "${v6[@]}"; do ufw allow proto "$p" from "$ip" to any port "$PORT" >/dev/null; done
+    ufw deny "$PORT/$p" >/dev/null
+  done
+  echo "ufw: SIP port $PORT now only accepts ${v4[*]} ${v6[*]} (ufw keeps the rules after a reboot)."
+  exit 0
+fi
+
 remove
 for t in iptables ip6tables; do
   $t -N "$CHAIN"
@@ -55,4 +69,5 @@ if command -v netfilter-persistent >/dev/null; then
   netfilter-persistent save >/dev/null && echo "Saved: the rules survive a reboot."
 else
   echo "These rules last until the next reboot. To keep them: apt-get install -y iptables-persistent && netfilter-persistent save"
+  echo "(Only if you don't use ufw: installing iptables-persistent removes it.)"
 fi
