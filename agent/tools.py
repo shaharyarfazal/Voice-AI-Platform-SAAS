@@ -10,6 +10,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import socket
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -59,6 +60,25 @@ async def _internal(path: str, payload: dict) -> dict:
         return {"ok": False, "message": "The booking service didn't respond properly."}
 
 
+_CLOSING = re.compile(
+    r"\b(bye|goodbye|good night|that'?s (all|it)|nothing else|no,? thanks|no thank you|hang up|end the call|"
+    r"i'?m (good|done|all set)|have a (good|great|nice))\b",
+    re.IGNORECASE,
+)
+
+
+def _caller_is_done(context: RunContext) -> bool:
+    """True when the last thing the caller said, or the agent's last reply, sounds like the end of the call.
+    Models sometimes call end_call in the middle of a conversation; this stops them."""
+    try:
+        items = [i for i in context.session.history.items if getattr(i, "type", None) == "message"]
+    except Exception:
+        return True  # can't tell: don't block hanging up
+    last_user = next((i.text_content or "" for i in reversed(items) if i.role == "user"), "")
+    last_agent = next((i.text_content or "" for i in reversed(items) if i.role == "assistant"), "")
+    return bool(_CLOSING.search(last_user) or _CLOSING.search(last_agent))
+
+
 def build_tools(
     config: dict,
     *,
@@ -75,8 +95,17 @@ def build_tools(
     if tools_cfg.get("endCall", True):
 
         @function_tool(name="end_call")
-        async def end_call(context: RunContext) -> None:
-            """End the call. Use after saying goodbye, when the caller is done."""
+        async def end_call(context: RunContext) -> str | None:
+            """Hang up. ONLY use this when the caller has clearly finished: they said goodbye, said they
+            need nothing else, or asked to end the call, AND you have already said goodbye to them.
+            Never use it while you are asking a question, collecting details (name, email, time zone,
+            date) or booking something: in that case keep the conversation going."""
+            if not _caller_is_done(context):
+                log_tool("end_call", {}, "refused: the caller hadn't finished")
+                return (
+                    "Not ending the call: the caller hasn't said goodbye or asked to hang up. "
+                    "Carry on with the conversation and respond to what they just said."
+                )
             await context.wait_for_playout()
             session_userdata["outcome"] = "completed"
             log_tool("end_call", {}, "call ended")
