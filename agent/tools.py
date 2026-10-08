@@ -123,12 +123,18 @@ def build_tools(
             Args:
                 query: What to look up, as a short question or keywords, e.g. "parking at the clinic".
             """
+            # One lookup per question is enough; models otherwise rephrase and search again and again,
+            # leaving the caller in silence.
+            if session_userdata.get("kb_searches", 0) >= 2:
+                return "You've already searched for this. Answer from what you found, or say you'll find out and offer to take a message. Don't search again."
+            session_userdata["kb_searches"] = session_userdata.get("kb_searches", 0) + 1
             # Only spoken if the lookup is slow.
             async with context.with_filler("Let me check that for you.", delay=1.5):
                 result = await _internal("/api/internal/tools/knowledge", {"agentId": agent_id, "query": query})
-            text = str(result.get("result") or "The knowledge base didn't answer. Say you'll find out and offer to take a message.")
             log_tool("search_knowledge_base", {"query": query}, f"{result.get('hits', 0)} passages found")
-            return text[:6000]
+            if not result.get("hits"):
+                return "Nothing in the knowledge base about that. Don't search again: say you're not sure and offer to take a message so someone can get back to them."
+            return str(result.get("result"))[:6000] + "\n\nAnswer the caller now from these passages. If they don't cover it, say so; don't search again."
 
         tools.append(search_knowledge_base)
 

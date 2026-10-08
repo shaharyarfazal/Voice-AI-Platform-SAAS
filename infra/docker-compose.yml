@@ -151,6 +151,8 @@ services:
       FALLBACK_LLM_BASE_URL: ${FALLBACK_LLM_BASE_URL:-}
       FALLBACK_LLM_API_KEY: ${FALLBACK_LLM_API_KEY:-}
       FALLBACK_LLM_MODEL: ${FALLBACK_LLM_MODEL:-}
+      # Warm agent processes kept ready for the next call. Raise on a server with spare CPU.
+      AGENT_IDLE_PROCESSES: ${AGENT_IDLE_PROCESSES:-2}
 
   # HTTPS for both domains. Skipped when COMPOSE_PROFILES in .env doesn't include "caddy",
   # for servers where nginx already owns ports 80/443 (use nginx/voice-platform.conf instead).

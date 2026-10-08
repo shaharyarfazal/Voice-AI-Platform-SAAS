@@ -260,7 +260,13 @@ def prewarm(proc: JobProcess) -> None:
 
 
 # Calls end with uploading the recording and an AI analysis; give that time before the process is stopped.
-server = AgentServer(setup_fnc=prewarm, shutdown_process_timeout=60.0)
+# The SDK keeps one warm process per CPU by default; on a shared VPS those idle processes compete with
+# live calls for CPU, so keep only a couple warm (a new call still starts a process when needed).
+server = AgentServer(
+    setup_fnc=prewarm,
+    shutdown_process_timeout=60.0,
+    num_idle_processes=int(os.environ.get("AGENT_IDLE_PROCESSES", "2")),
+)
 
 
 @server.rtc_session(agent_name=AGENT_NAME)
@@ -385,6 +391,8 @@ async def entrypoint(ctx: JobContext) -> None:
     @session.on("conversation_item_added")
     def _on_item(event) -> None:
         item = event.item
+        if getattr(item, "type", None) == "message" and item.role == "user":
+            userdata["kb_searches"] = 0  # a new question gets fresh knowledge-base lookups
         if getattr(item, "type", None) == "message" and item.role in ("user", "assistant") and item.text_content:
             transcript.append({"role": item.role, "text": item.text_content, "at": _now()})
             latency.observe(item.role, getattr(item, "metrics", None) or {})

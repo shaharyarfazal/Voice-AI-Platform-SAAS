@@ -9,7 +9,7 @@ import {
   useTranscriptions,
   useVoiceAssistant,
 } from "@livekit/components-react";
-import { Room, RoomEvent } from "livekit-client";
+import { DisconnectReason, Room, RoomEvent } from "livekit-client";
 import { useEffect, useRef, useState } from "react";
 
 const STATE_LABEL: Record<string, string> = {
@@ -20,6 +20,16 @@ const STATE_LABEL: Record<string, string> = {
   listening: "Listening",
   thinking: "Thinking…",
   speaking: "Speaking",
+};
+
+/** Why the call ended, in words. Anything else shows the raw reason, which helps support. */
+const END_REASON: Partial<Record<DisconnectReason, string>> = {
+  [DisconnectReason.CLIENT_INITIATED]: "You ended the call.",
+  [DisconnectReason.ROOM_DELETED]: "The agent ended the call.",
+  [DisconnectReason.PARTICIPANT_REMOVED]: "The agent ended the call.",
+  [DisconnectReason.SIGNAL_CLOSE]: "The connection to the call server dropped. Check your internet connection and try again.",
+  [DisconnectReason.STATE_MISMATCH]: "The connection to the call server dropped. Try again.",
+  [DisconnectReason.JOIN_FAILURE]: "Couldn't join the call. Try again.",
 };
 
 function newRoom() {
@@ -77,9 +87,13 @@ export function TestCall({ agentId }: { agentId: string }) {
   const [room, setRoom] = useState<Room>(newRoom);
   const [status, setStatus] = useState<"idle" | "starting" | "live" | "ended">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [endReason, setEndReason] = useState<string | null>(null);
 
   useEffect(() => {
-    const onDisconnected = () => setStatus((s) => (s === "live" ? "ended" : s));
+    const onDisconnected = (reason?: DisconnectReason) => {
+      setStatus((s) => (s === "live" ? "ended" : s));
+      setEndReason(reason === undefined ? null : (END_REASON[reason] ?? `Disconnected (${DisconnectReason[reason] ?? reason}).`));
+    };
     room.on(RoomEvent.Disconnected, onDisconnected);
     return () => {
       room.off(RoomEvent.Disconnected, onDisconnected);
@@ -90,6 +104,7 @@ export function TestCall({ agentId }: { agentId: string }) {
 
   async function start() {
     setError(null);
+    setEndReason(null);
     setStatus("starting");
     // A fresh room per call, so the transcript starts empty.
     const next = status === "idle" ? room : newRoom();
@@ -137,6 +152,7 @@ export function TestCall({ agentId }: { agentId: string }) {
         {status !== "idle" && (
           <div className="border-t border-border pt-4">
             <LiveTranscript />
+            {status === "ended" && endReason && <p className="mt-3 text-sm">{endReason}</p>}
             {status === "ended" && <p className="mt-3 text-xs text-muted">Call ended. The recording, transcript and analysis are on the Calls page in a few seconds.</p>}
           </div>
         )}
