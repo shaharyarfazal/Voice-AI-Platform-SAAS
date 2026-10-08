@@ -35,6 +35,18 @@ The script is safe to re-run whenever you change the IP lists. Then add each num
 dashboard and choose its agent. Calls to numbers that aren't in the dashboard are hung up before
 any AI provider is called, so they cost nothing.
 
+### Block SIP scanners
+
+Bots scan the internet for open SIP servers and try to place free calls through them. LiveKit
+rejects them, but every attempt uses CPU and fills the SIP log. Close port 5060 to everyone except
+your carriers (the same IP lists as above):
+
+```sh
+cd infra
+sudo ./sip-firewall.sh            # re-run after changing TELNYX_SIP_IPS / TWILIO_SIP_IPS
+sudo ./sip-firewall.sh --remove   # undo
+```
+
 ## Transfers
 
 When an agent has a transfer number, the caller can ask for a person and the agent transfers
