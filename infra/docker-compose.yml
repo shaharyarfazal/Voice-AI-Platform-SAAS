@@ -7,10 +7,18 @@
 #
 # Usage:  cd infra && cp .env.example .env && (edit .env) && docker compose up -d --build
 
+# Docker keeps container logs forever by default; cap each service at 3 x 20 MB.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_DB: voice
       POSTGRES_USER: voice
@@ -27,6 +35,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging: *logging
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}", "--appendonly", "yes"]
     ports:
       - "127.0.0.1:16379:6379"
@@ -36,6 +45,7 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     restart: unless-stopped
+    logging: *logging
     network_mode: host
     depends_on: [redis]
     environment:
@@ -58,6 +68,7 @@ services:
   sip:
     image: livekit/sip:latest
     restart: unless-stopped
+    logging: *logging
     network_mode: host
     depends_on: [livekit]
     environment:
@@ -78,6 +89,7 @@ services:
   web:
     build: ../web
     restart: unless-stopped
+    logging: *logging
     network_mode: host
     depends_on:
       postgres:
@@ -127,6 +139,7 @@ services:
   agent:
     build: ../agent
     restart: unless-stopped
+    logging: *logging
     network_mode: host
     depends_on: [livekit, web]
     # Each call runs in its own process; give the worker room to grow.
@@ -160,6 +173,7 @@ services:
     image: caddy:2-alpine
     profiles: ["caddy"]
     restart: unless-stopped
+    logging: *logging
     network_mode: host
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?set APP_DOMAIN}
