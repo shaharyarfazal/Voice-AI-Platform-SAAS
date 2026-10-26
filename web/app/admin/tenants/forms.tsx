@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { createClient, updateClient } from "./actions";
+import { createClient, updateClient, updateClientCredits } from "./actions";
 
 export function NewClientForm() {
   const [state, action, pending] = useActionState(createClient, undefined);
@@ -94,6 +94,50 @@ export function ClientSettingsForm({ client }: { client: ClientFormValues }) {
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       {state?.saved && <p className="text-sm text-green-600">Saved.</p>}
       <button className="btn" disabled={pending}>Save</button>
+    </form>
+  );
+}
+
+export function ClientCreditsForm({
+  client,
+}: {
+  client: { id: string; billingMode: string; creditsPerMinute: string; balance: string; isSubAccount: boolean };
+}) {
+  const [state, action, pending] = useActionState(updateClientCredits, undefined);
+  return (
+    <form action={action} className="card space-y-4">
+      <input type="hidden" name="id" value={client.id} />
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-medium">Credits</h2>
+        <span className="text-sm text-muted">Balance <span className="font-semibold text-foreground tabular-nums">{client.balance}</span></span>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="billingMode">Billing</label>
+          <select className="input" id="billingMode" name="billingMode" defaultValue={client.billingMode}>
+            <option value="credits">Credits (Stripe) — calls stop at zero</option>
+            {client.isSubAccount && <option value="parent">Uses the agency&apos;s credits</option>}
+            <option value="manual">Invoiced manually — no limit</option>
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="creditsPerMinute">Credits per call minute</label>
+          <input className="input" id="creditsPerMinute" name="creditsPerMinute" type="number" step="0.001" min={0} defaultValue={client.creditsPerMinute} />
+        </div>
+        <div>
+          <label className="label" htmlFor="adjust">Add or remove credits</label>
+          <input className="input" id="adjust" name="adjust" type="number" step="0.1" placeholder="e.g. 50 or -10" />
+        </div>
+        <div>
+          <label className="label" htmlFor="reason">Reason</label>
+          <input className="input" id="reason" name="reason" maxLength={200} placeholder="Refund for dropped call" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="btn" disabled={pending}>{pending ? "Saving…" : "Save"}</button>
+        {state?.error && <p className="text-sm text-critical">▲ <span className="text-foreground">{state.error}</span></p>}
+        {state?.saved && <p className="text-sm text-good">✓ <span className="text-foreground">Saved</span></p>}
+      </div>
     </form>
   );
 }

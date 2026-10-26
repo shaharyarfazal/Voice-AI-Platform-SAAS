@@ -1,10 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { createAccount } from "@/lib/accounts";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { hashPassword, requireAdmin } from "@/lib/auth";
+import { addPaidCredits } from "@/lib/billing/wallet";
 import { sql } from "@/lib/db";
 import { isUuid } from "@/lib/validation";
 
@@ -27,7 +29,7 @@ export async function createClient(_: FormState, form: FormData): Promise<FormSt
   if (existing) return { error: "A user with this email already exists" };
 
   const passwordHash = await hashPassword(password);
-  const { tenantId } = await sql.begin((tx) => createAccount(tx, { email, passwordHash, company }));
+  const { tenantId } = await sql.begin((tx) => createAccount(tx, { email, passwordHash, company, billingMode: "manual" }));
   redirect(`/admin/tenants/${tenantId}`);
 }
 
@@ -69,4 +71,30 @@ export async function deleteClient(form: FormData) {
   const deleted = await sql`
     DELETE FROM tenants WHERE id = ${id} AND name = ${form.get("confirm")?.toString().trim() ?? ""} RETURNING id`;
   redirect(deleted.length > 0 ? "/admin/tenants" : `/admin/tenants/${id}?delete=mismatch`);
+}
+
+const CreditsForm = z.object({
+  id: z.uuid(),
+  billingMode: z.enum(["credits", "parent", "manual"]),
+  creditsPerMinute: z.coerce.number().min(0).max(1000),
+  adjust: z.coerce.number().min(-1_000_000).max(1_000_000),
+  reason: z.string().trim().max(200),
+});
+
+/** Billing mode, the client's rate, and a manual credit adjustment (refunds, goodwill, corrections). */
+export async function updateClientCredits(_: FormState, form: FormData): Promise<FormState> {
+  const admin = await requireAdmin();
+  const parsed = CreditsForm.safeParse({ ...Object.fromEntries(form), adjust: form.get("adjust") || 0 });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const c = parsed.data;
+  const [tenant] = await sql<{ parent_id: string | null }[]>`SELECT parent_id FROM tenants WHERE id = ${c.id}`;
+  if (!tenant) return { error: "Client not found" };
+  if (c.billingMode === "parent" && !tenant.parent_id) return { error: "Only sub-accounts can use their agency's credits." };
+  if (c.adjust !== 0 && !c.reason) return { error: "Say why you're adjusting the credits." };
+  await sql`UPDATE tenants SET billing_mode = ${c.billingMode}, credits_per_minute = ${c.creditsPerMinute} WHERE id = ${c.id}`;
+  if (c.adjust !== 0) {
+    await addPaidCredits(c.id, c.adjust, { kind: "adjustment", ref: randomUUID(), description: `${c.reason} (by ${admin.email})` });
+  }
+  revalidatePath(`/admin/tenants/${c.id}`);
+  return { saved: true };
 }

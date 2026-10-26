@@ -1,4 +1,7 @@
+import { after } from "next/server";
 import { z } from "zod";
+import { afterSpend } from "@/lib/billing/stripe";
+import { chargeCall } from "@/lib/billing/wallet";
 import { isInternalRequest } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { recordingExists } from "@/lib/recordings";
@@ -68,10 +71,15 @@ export async function POST(request: Request) {
            ${sql.json(call.latency ?? {})}
     FROM agents a WHERE a.id = ${call.agentId}
     ON CONFLICT (room_name) DO NOTHING
-    RETURNING id`;
+    RETURNING id, tenant_id, (SELECT name FROM agents WHERE id = ${call.agentId}) AS agent_name`;
 
   await sql`DELETE FROM live_calls WHERE room_name = ${call.roomName}`;
   const id: string | null = inserted[0]?.id ?? null;
+  if (id) {
+    // Charged on the first report only; the ledger also ignores a repeated call id.
+    const wallet = await chargeCall({ id, tenantId: inserted[0].tenant_id, seconds: durationSeconds, agentName: inserted[0].agent_name });
+    if (wallet) after(() => afterSpend(wallet.tenantId));
+  }
   if (id) dispatchWebhook(call.agentId, "call_ended", id, async () => (await loadWebhookCall(id))?.call ?? null);
   return Response.json({ id });
 }

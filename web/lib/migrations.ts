@@ -313,6 +313,56 @@ const MIGRATIONS: { id: string; sql: string }[] = [
       ALTER TABLE live_calls ADD COLUMN IF NOT EXISTS direction text NOT NULL DEFAULT 'inbound';
     `,
   },
+  {
+    id: "0007_brands_credits_stripe",
+    sql: `
+      -- Brands: several niche products (HVAC, Limo, ...) share one platform and database.
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS brand text NOT NULL DEFAULT 'default';
+      CREATE INDEX IF NOT EXISTS tenants_brand_idx ON tenants(brand);
+
+      -- Credits. billing_mode: 'credits' pays through Stripe and calls stop at zero; 'parent' draws on
+      -- the agency's wallet; 'manual' is invoiced by hand, as every workspace was before this.
+      ALTER TABLE tenants
+        ADD COLUMN IF NOT EXISTS billing_mode text NOT NULL DEFAULT 'manual' CHECK (billing_mode IN ('credits', 'parent', 'manual')),
+        ADD COLUMN IF NOT EXISTS credits_per_minute numeric(10,3) NOT NULL DEFAULT 1,
+        ADD COLUMN IF NOT EXISTS plan_credits_milli bigint NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS paid_credits_milli bigint NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS stripe_customer_id text UNIQUE,
+        ADD COLUMN IF NOT EXISTS stripe_subscription_id text UNIQUE,
+        ADD COLUMN IF NOT EXISTS plan_id text,
+        ADD COLUMN IF NOT EXISTS subscription_status text,
+        ADD COLUMN IF NOT EXISTS current_period_end timestamptz,
+        ADD COLUMN IF NOT EXISTS auto_recharge jsonb NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS auto_recharge_at timestamptz;
+      UPDATE tenants SET billing_mode = 'parent' WHERE parent_id IS NOT NULL;
+
+      -- Every change to a wallet, append-only. (tenant_id, kind, ref) is unique, so a Stripe event
+      -- or call report that arrives twice never counts twice.
+      CREATE TABLE IF NOT EXISTS credit_ledger (
+        id                 bigserial PRIMARY KEY,
+        tenant_id          uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        kind               text NOT NULL CHECK (kind IN ('trial', 'purchase', 'auto_recharge', 'plan_renewal', 'call', 'chat', 'adjustment', 'refund')),
+        ref                text NOT NULL,
+        plan_delta_milli   bigint NOT NULL DEFAULT 0,
+        paid_delta_milli   bigint NOT NULL DEFAULT 0,
+        plan_after_milli   bigint NOT NULL,
+        paid_after_milli   bigint NOT NULL,
+        -- The workspace that used the credits, when a sub-account spends its agency's wallet.
+        used_by            uuid REFERENCES tenants(id) ON DELETE SET NULL,
+        description        text NOT NULL DEFAULT '',
+        created_at         timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (tenant_id, kind, ref)
+      );
+      CREATE INDEX IF NOT EXISTS credit_ledger_tenant_idx ON credit_ledger(tenant_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS credit_ledger_used_by_idx ON credit_ledger(used_by, created_at DESC) WHERE used_by IS NOT NULL;
+
+      CREATE TABLE IF NOT EXISTS stripe_events (
+        id           text PRIMARY KEY,
+        type         text NOT NULL,
+        received_at  timestamptz NOT NULL DEFAULT now()
+      );
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {
