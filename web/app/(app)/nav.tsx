@@ -17,6 +17,7 @@ const GROUPS = [
     label: "Activity",
     items: [
       { href: "/calls", label: "Calls & chats", icon: "≡" },
+      { href: "/schedule", label: "Schedule", icon: "▤" },
       { href: "/appointments", label: "Appointments", icon: "▦" },
     ],
   },

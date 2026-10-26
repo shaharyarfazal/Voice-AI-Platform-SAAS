@@ -3,7 +3,16 @@ import { z } from "zod";
 // Shapes of the JSON columns on agents (tools, guardrails, booking). Parsed with defaults, so
 // agents saved before a field existed still work.
 
-const BUILTIN_NAMES = ["end_call", "transfer_call", "check_availability", "book_appointment"];
+const BUILTIN_NAMES = [
+  "end_call",
+  "transfer_call",
+  "check_availability",
+  "book_appointment",
+  "hold_slot",
+  "find_appointments",
+  "reschedule_appointment",
+  "cancel_appointment",
+];
 
 export const CustomFunctionSchema = z.object({
   name: z
@@ -34,6 +43,8 @@ export const ToolsSchema = z.object({
   endCall: z.boolean().default(true),
   transferCall: z.boolean().default(true),
   booking: z.boolean().default(false),
+  /** Book jobs through the scheduling engine (technicians, round-robin, holds) instead of one calendar. */
+  scheduling: z.boolean().default(false),
   custom: z.array(CustomFunctionSchema).max(15).default([]),
   mcp: z.array(McpServerSchema).max(5).default([]),
 });

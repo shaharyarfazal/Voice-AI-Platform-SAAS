@@ -3,3 +3,6 @@
 infra/.env
 __pycache__/
 .venv/
+.env.bak*
+infra/.env.*
+!infra/.env.example

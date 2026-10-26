@@ -1,0 +1,35 @@
+[project]
+name = "scheduler"
+version = "0.1.0"
+description = "Scheduling engine: availability, race-safe bookings, assignment and calendar sync"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "sqlalchemy[asyncio]>=2.0.36",
+  "asyncpg>=0.30",
+  "alembic>=1.14",
+  "arq>=0.26",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "pyjwt>=2.9",
+  "cryptography>=43",
+  "phonenumbers>=8.13",
+  "python-multipart>=0.0.17",
+  "structlog>=24.4",
+  "httpx>=0.28",
+  "prometheus-client>=0.21",
+]
+
+[project.optional-dependencies]
+s3 = ["boto3>=1.35"]
+dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "pyyaml>=6.0"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120

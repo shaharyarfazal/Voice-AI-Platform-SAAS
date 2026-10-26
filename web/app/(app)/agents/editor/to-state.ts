@@ -51,6 +51,7 @@ export function toEditorState(row?: Row, browserTimezone = "UTC", type: EditorSt
       endCall: tools.endCall,
       transferCall: tools.transferCall && Boolean(row?.transfer_number),
       booking: tools.booking,
+      scheduling: tools.scheduling,
       custom: tools.custom.map((f) => ({
         name: f.name,
         description: f.description,

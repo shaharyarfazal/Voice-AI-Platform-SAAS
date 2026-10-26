@@ -31,7 +31,7 @@ export type EditorState = {
   language: string;
   providers: AgentProviders;
   transferNumber: string;
-  tools: { endCall: boolean; transferCall: boolean; booking: boolean; custom: EditorFunction[]; mcp: EditorMcp[] };
+  tools: { endCall: boolean; transferCall: boolean; booking: boolean; scheduling: boolean; custom: EditorFunction[]; mcp: EditorMcp[] };
   booking: Booking;
   guardrails: Guardrails;
   postCall: PostCall;

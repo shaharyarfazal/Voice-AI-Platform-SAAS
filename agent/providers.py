@@ -156,12 +156,15 @@ def build_realtime(choice: dict, language: str, *, noisy: bool, speed: str):
     from openai.types.realtime import AudioTranscription
     from openai.types.realtime.realtime_audio_input_turn_detection import SemanticVad
 
-    lang = None if language == "multi" else base_language(language)
+    # OpenAI rejects a null language, so leave it out entirely to auto-detect in multilingual mode.
+    transcription = {"model": "gpt-4o-mini-transcribe"}
+    if language != "multi":
+        transcription["language"] = base_language(language)
     return openai.realtime.RealtimeModel(
         model=choice.get("model") or "gpt-realtime",
         voice=choice.get("voice") or "marin",
         # Transcribes the caller for the call log (the model itself listens to the audio).
-        input_audio_transcription=AudioTranscription(model="gpt-4o-mini-transcribe", language=lang),
+        input_audio_transcription=AudioTranscription(**transcription),
         # Phone audio held at a distance in noisy places; close-talking otherwise.
         input_audio_noise_reduction="far_field" if noisy else "near_field",
         turn_detection=SemanticVad(

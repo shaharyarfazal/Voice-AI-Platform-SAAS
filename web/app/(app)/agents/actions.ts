@@ -56,6 +56,7 @@ const Payload = z.object({
     endCall: z.boolean(),
     transferCall: z.boolean(),
     booking: z.boolean(),
+    scheduling: z.boolean(),
     custom: z.array(CustomFunctionSchema.omit({ authorizationEnc: true }).extend(SecretInput)).max(15),
     mcp: z.array(McpServerSchema.omit({ authorizationEnc: true }).extend(SecretInput)).max(5),
   }),
@@ -91,6 +92,7 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
     const [own] = await sql`SELECT 1 FROM integrations WHERE id = ${a.booking.integrationId} AND tenant_id = ${tenantId}`;
     if (!own) return { error: "Pick one of your connected calendars" };
   }
+  if (a.tools.booking && a.tools.scheduling) return { error: "Use either calendar booking or the scheduling engine, not both" };
   if (a.tools.booking && !a.booking.integrationId) return { error: "Choose a calendar for booking, or turn booking off" };
   if (a.postCall.webhookUrl) {
     try {
@@ -120,6 +122,7 @@ export async function saveAgent(_: AgentFormState, form: FormData): Promise<Agen
     endCall: a.tools.endCall,
     transferCall: a.tools.transferCall,
     booking: a.tools.booking,
+    scheduling: a.tools.scheduling,
     custom: a.tools.custom.map(({ authorization, keepAuthorization, ...f }) => ({
       ...f,
       authorizationEnc: secret({ authorization, keepAuthorization }, previous.custom.find((p) => p.name === f.name)?.authorizationEnc),

@@ -26,6 +26,35 @@ test users you list can connect, and tokens expire after 7 days. To let any clie
 the app for **verification** (Google reviews it; plan for days to weeks). Sign-in alone (openid,
 email, profile) doesn't need verification.
 
+### Technicians' calendars (Schedule)
+
+The Schedule pages connect each technician's own calendar with the same Google client. Add a
+second redirect URI to the client (**Clients → your web client → Authorized redirect URIs**):
+
+- `https://app.aicall.business/api/schedule-oauth/google/callback`
+
+and these scopes under **Data access**:
+
+- `.../auth/calendar.events`: write jobs to the calendar and notice changes made there
+- `.../auth/calendar.calendarlist.readonly`: list the technician's calendars to choose from
+- `.../auth/calendar.freebusy`: check the exact time live before confirming a booking
+
+Google tells the app about calendar changes through push notifications to
+`https://<your domain>/api/schedule-webhooks/google`. That needs a public HTTPS domain with a
+valid certificate, which the production setup already has. Under **Branding**, the domain must
+be verified as an authorized domain. Nothing else to register.
+
+For Google's verification (sensitive scopes), have ready:
+- a privacy policy and terms on the verified domain;
+- a short justification per scope (above);
+- a demo video showing the connect flow and a job appearing in the calendar.
+
+Expect a security assessment if Google classes the use as restricted; `calendar.events` is
+*sensitive*, not restricted, at the time of writing.
+
+Data deletion: **Disconnect** on Schedule → Team revokes the token at Google, stops notifications
+and deletes the busy times and event links kept for that calendar.
+
 ## Microsoft
 
 1. Go to [portal.azure.com](https://portal.azure.com) → **Microsoft Entra ID → App registrations

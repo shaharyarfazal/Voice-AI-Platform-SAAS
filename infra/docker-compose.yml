@@ -46,6 +46,8 @@ services:
     image: livekit/livekit-server:latest
     restart: unless-stopped
     logging: *logging
+    # Voice traffic gets CPU before anything else on the server (dashboard, database, other tools).
+    cpu_shares: 4096
     network_mode: host
     depends_on: [redis]
     environment:
@@ -69,6 +71,7 @@ services:
     image: livekit/sip:latest
     restart: unless-stopped
     logging: *logging
+    cpu_shares: 4096
     network_mode: host
     depends_on: [livekit]
     environment:
@@ -103,6 +106,11 @@ services:
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
       NEXT_PUBLIC_LIVEKIT_URL: wss://${LIVEKIT_DOMAIN}
+      # Optional LiveKit Cloud project for browser calls (see agent-cloud below).
+      LIVEKIT_WEB_CALLS: ${LIVEKIT_WEB_CALLS:-self-hosted}
+      LIVEKIT_CLOUD_URL: ${LIVEKIT_CLOUD_URL:-}
+      LIVEKIT_CLOUD_API_KEY: ${LIVEKIT_CLOUD_API_KEY:-}
+      LIVEKIT_CLOUD_API_SECRET: ${LIVEKIT_CLOUD_API_SECRET:-}
       ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
       PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-}
       # Used by the admin panel's health checks and live metrics.
@@ -113,6 +121,9 @@ services:
       # Google / Microsoft sign-in and calendar connections (docs/integrations.md).
       APP_URL: https://${APP_DOMAIN}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      # Scheduling engine (the Schedule pages talk to it through the web app).
+      SCHEDULER_URL: http://127.0.0.1:8100
+      SCHED_JWT_SECRET: ${SCHED_JWT_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
@@ -136,19 +147,62 @@ services:
     volumes:
       - recordings:/data/recordings
 
+  # Scheduling engine (scheduler/): availability, race-safe bookings, technicians and job records.
+  # Runs its migrations (Postgres schema "sched") on start. Only the web app and the agent call it,
+  # on 127.0.0.1:8100; it is not exposed publicly.
+  scheduler:
+    build: { context: ../scheduler, target: prod }
+    restart: unless-stopped
+    logging: *logging
+    network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &scheduler-env
+      HOST: 127.0.0.1
+      PORT: 8100
+      DATABASE_URL: postgresql+asyncpg://voice:${POSTGRES_PASSWORD}@127.0.0.1:15432/voice
+      # Database 2, apart from anything else using this Redis.
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@127.0.0.1:16379/2
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      SCHED_JWT_SECRET: ${SCHED_JWT_SECRET:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_URL: https://${APP_DOMAIN}
+      # Technicians' calendars: the same OAuth apps as sign-in (docs/integrations.md).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+    volumes:
+      - scheduler-artifacts:/data/artifacts
+
+  # Background jobs: hold expiry, calendar writes with retries, calendar sync, notification channel
+  # renewal, token refresh and reconciliation.
+  scheduler-worker:
+    build: { context: ../scheduler, target: prod }
+    restart: unless-stopped
+    logging: *logging
+    network_mode: host
+    depends_on: [scheduler, redis]
+    command: ["arq", "app.worker.settings.WorkerSettings"]
+    environment: *scheduler-env
+
   agent:
     build: ../agent
     restart: unless-stopped
     logging: *logging
+    cpu_shares: 4096
     network_mode: host
     depends_on: [livekit, web]
     # Each call runs in its own process; give the worker room to grow.
     stop_grace_period: 2m
-    environment:
+    environment: &agent-env
       LIVEKIT_URL: ws://127.0.0.1:7880
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
       WEB_API_URL: http://127.0.0.1:3000
+      SCHEDULER_URL: http://127.0.0.1:8100
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       # AI providers: set any you have. Each agent picks one per role; the rest are fallbacks.
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
@@ -166,6 +220,24 @@ services:
       FALLBACK_LLM_MODEL: ${FALLBACK_LLM_MODEL:-}
       # Warm agent processes kept ready for the next call. Raise on a server with spare CPU.
       AGENT_IDLE_PROCESSES: ${AGENT_IDLE_PROCESSES:-2}
+
+  # The same agent, connected to LiveKit Cloud instead of the self-hosted server. Runs only when
+  # COMPOSE_PROFILES in .env includes "cloud"; Admin > System switches browser calls to it.
+  agent-cloud:
+    build: ../agent
+    profiles: ["cloud"]
+    restart: unless-stopped
+    logging: *logging
+    network_mode: host
+    depends_on: [web]
+    stop_grace_period: 2m
+    environment:
+      <<: *agent-env
+      LIVEKIT_URL: ${LIVEKIT_CLOUD_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_CLOUD_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_CLOUD_API_SECRET:-}
+      # The self-hosted agent already listens on 8081.
+      AGENT_HTTP_PORT: 8082
 
   # HTTPS for both domains. Skipped when COMPOSE_PROFILES in .env doesn't include "caddy",
   # for servers where nginx already owns ports 80/443 (use nginx/voice-platform.conf instead).
@@ -187,3 +259,4 @@ volumes:
   redis-data:
   caddy-data:
   recordings:
+  scheduler-artifacts:

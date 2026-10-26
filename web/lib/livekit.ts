@@ -1,12 +1,22 @@
 import "server-only";
 import { AccessToken, RoomAgentDispatch, RoomConfiguration } from "livekit-server-sdk";
+import { getMediaServer } from "./media-server";
 
 export const AGENT_NAME = process.env.AGENT_NAME ?? "voice-agent";
 
+/** Where browser calls (dashboard tests and widgets) connect: the VPS or LiveKit Cloud, set in Admin > System. */
+async function browserCallServer() {
+  if ((await getMediaServer()) === "cloud") {
+    return { url: process.env.LIVEKIT_CLOUD_URL!, key: process.env.LIVEKIT_CLOUD_API_KEY, secret: process.env.LIVEKIT_CLOUD_API_SECRET };
+  }
+  return { url: process.env.NEXT_PUBLIC_LIVEKIT_URL!, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
+}
+
 /** Token for a browser test call; joining the room dispatches the agent with the agent id. */
 export async function createTestCallToken(agentId: string, userId: string) {
+  const server = await browserCallServer();
   const roomName = `web-${agentId.slice(0, 8)}-${crypto.randomUUID().slice(0, 8)}`;
-  const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
+  const token = new AccessToken(server.key, server.secret, {
     identity: `user-${userId}`,
     ttl: "15m",
   });
@@ -14,14 +24,15 @@ export async function createTestCallToken(agentId: string, userId: string) {
   token.roomConfig = new RoomConfiguration({
     agents: [new RoomAgentDispatch({ agentName: AGENT_NAME, metadata: JSON.stringify({ agentId }) })],
   });
-  return { roomName, token: await token.toJwt(), url: process.env.NEXT_PUBLIC_LIVEKIT_URL! };
+  return { roomName, token: await token.toJwt(), url: server.url };
 }
 
 /** Token for a website visitor's voice call through a widget. */
 export async function createWidgetCallToken(agentId: string, widgetId: string) {
+  const server = await browserCallServer();
   const id = crypto.randomUUID();
   const roomName = `widget-${id.slice(0, 13)}`;
-  const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
+  const token = new AccessToken(server.key, server.secret, {
     identity: `visitor-${id.slice(0, 8)}`,
     ttl: "10m",
   });
@@ -29,5 +40,5 @@ export async function createWidgetCallToken(agentId: string, widgetId: string) {
   token.roomConfig = new RoomConfiguration({
     agents: [new RoomAgentDispatch({ agentName: AGENT_NAME, metadata: JSON.stringify({ agentId, widgetId }) })],
   });
-  return { roomName, token: await token.toJwt(), url: process.env.NEXT_PUBLIC_LIVEKIT_URL! };
+  return { roomName, token: await token.toJwt(), url: server.url };
 }

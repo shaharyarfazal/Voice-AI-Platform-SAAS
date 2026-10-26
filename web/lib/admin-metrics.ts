@@ -4,6 +4,7 @@ import os from "node:os";
 import Redis from "ioredis";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { sql } from "./db";
+import { cloudConfigured } from "./media-server";
 import { callCostSql, getSettings, ratesConfigured } from "./settings";
 
 // The web container runs on the host network without its own PID/proc limits, so /proc and the
@@ -103,7 +104,16 @@ const livekitUrl = () => process.env.LIVEKIT_HTTP_URL ?? "http://127.0.0.1:7880"
 
 export async function services(): Promise<{ services: ServiceStatus[]; agentJobs: number | null }> {
   let agentJobs: number | null = null;
-  const [db, red, livekit, sip, agent] = await Promise.all([
+  const describeWorker = (b: string) => {
+    try {
+      const w = JSON.parse(b);
+      const jobs = Number(w.active_jobs ?? 0);
+      return `${jobs} active call${jobs === 1 ? "" : "s"}, load ${Math.round(Number(w.worker_load ?? 0) * 100)}%`;
+    } catch {
+      return "Healthy";
+    }
+  };
+  const [db, red, livekit, sip, agent, cloudAgent] = await Promise.all([
     sql`SELECT 1`.then(
       () => ({ name: "Database (Postgres)", ok: true, detail: "Healthy" }),
       (e: Error) => ({ name: "Database (Postgres)", ok: false, detail: e.message }),
@@ -120,6 +130,9 @@ export async function services(): Promise<{ services: ServiceStatus[]; agentJobs
         return "Healthy";
       }
     }),
+    cloudConfigured()
+      ? probe("Voice agent (LiveKit Cloud)", (process.env.AGENT_CLOUD_HEALTH_URL ?? "http://127.0.0.1:8082") + "/worker", describeWorker)
+      : null,
   ]);
   return {
     services: [
@@ -129,6 +142,7 @@ export async function services(): Promise<{ services: ServiceStatus[]; agentJobs
       livekit,
       sip,
       agent,
+      ...(cloudAgent ? [cloudAgent] : []),
     ],
     agentJobs,
   };

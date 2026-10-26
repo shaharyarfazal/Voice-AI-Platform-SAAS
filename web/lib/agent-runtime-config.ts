@@ -59,6 +59,17 @@ function toolPrompt(tools: ReturnType<typeof parseTools>, bookingReady: boolean,
       "Never say an appointment is booked unless book_appointment succeeded.",
     );
   }
+  if (tools.scheduling) {
+    lines.push(
+      "To book a job: find out what service they need and the service address including the ZIP code, then call check_availability (with a date if they named a day).",
+      "Offer two or three of the open times, never more. Only offer times that check_availability returned.",
+      "When the caller picks a time, call hold_slot with its slot_id straight away, so nobody else can take it while you collect their details.",
+      "Then get their full name, confirm the phone number, and ask briefly what the problem is. Repeat the day, time window and address back and get a clear yes before calling book_appointment.",
+      "If the system isn't working at all (no heat, no cooling, no hot water) or there's any risk to safety, set emergency to true.",
+      "To check, move or cancel an existing booking, call find_appointments first; then reschedule_appointment or cancel_appointment.",
+      "If a tool says a time was taken, apologise and offer the alternatives it returned. Never say a job is booked unless book_appointment succeeded.",
+    );
+  }
   if (tools.transferCall) lines.push("If the caller asks for a person, or you can't help, say you're transferring them, then call transfer_call.");
   if (tools.endCall) lines.push("When the conversation is finished, say a short goodbye, then call end_call.");
   return lines.map((l) => `- ${l}`).join("\n");
@@ -76,7 +87,11 @@ export async function buildSystemPrompt(row: FullAgentRow, channel: Channel, set
     language === "multi"
       ? `Reply in the language the ${channel === "voice" ? "caller speaks" : "visitor writes in"}. If unsure, use English.`
       : `Always ${channel === "voice" ? "speak" : "reply in"} ${languageLabel(language)}, even if the ${channel === "voice" ? "caller" : "visitor"} switches language, unless they ask you to change.`;
-  const toolRules = toolPrompt(channel === "chat" ? { ...tools, endCall: false, transferCall: false } : tools, bookingReady, knowledge);
+  const toolRules = toolPrompt(
+    channel === "chat" ? { ...tools, endCall: false, transferCall: false, scheduling: false } : tools,
+    bookingReady && !tools.scheduling,
+    knowledge,
+  );
   return [
     row.system_prompt.trim(),
     `## Language\n- ${languageRule}`,
@@ -130,7 +145,8 @@ export async function buildRuntimeConfig(row: FullAgentRow) {
       endCall: tools.endCall,
       transferCall: tools.transferCall && Boolean(row.transfer_number),
       transferNumber: row.transfer_number,
-      booking: bookingReady,
+      booking: bookingReady && !tools.scheduling,
+      scheduling: tools.scheduling,
       knowledge,
       custom: tools.custom.map((f) => ({
         name: f.name,

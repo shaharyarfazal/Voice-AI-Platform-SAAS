@@ -266,6 +266,7 @@ server = AgentServer(
     setup_fnc=prewarm,
     shutdown_process_timeout=60.0,
     num_idle_processes=int(os.environ.get("AGENT_IDLE_PROCESSES", "2")),
+    port=int(os.environ.get("AGENT_HTTP_PORT", "8081")),
 )
 
 

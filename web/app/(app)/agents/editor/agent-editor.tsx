@@ -229,9 +229,19 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
             </Field>
           </div>
         )}
-        <Toggle checked={s.tools.booking} onChange={(v) => setTools({ booking: v })} title="Check availability and book appointments">
+        <Toggle checked={s.tools.booking} onChange={(v) => setTools(v ? { booking: true, scheduling: false } : { booking: false })} title="Check availability and book appointments">
           Uses your connected Google or Outlook calendar.
         </Toggle>
+        {!chat && (
+          <Toggle
+            checked={s.tools.scheduling}
+            onChange={(v) => setTools(v ? { scheduling: true, booking: false } : { scheduling: false })}
+            title="Book jobs for your team"
+          >
+            Uses the Schedule page: picks a free technician with the right skills, holds the slot while the caller gives
+            their details, and lets callers find, move or cancel their bookings.
+          </Toggle>
+        )}
         {s.tools.booking && <BookingSettings s={s} context={context} setBooking={setBooking} />}
       </section>
 

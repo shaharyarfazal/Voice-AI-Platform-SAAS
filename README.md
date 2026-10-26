@@ -19,6 +19,7 @@ Browser test call ─────WebRTC─────────────�
 |---|---|
 | `agent/` | LiveKit Agents worker. `providers.py` builds speech-to-text, LLM and voice from each agent's provider chain with automatic fallback; `tools.py` has the built-in tools (end call, transfer, check availability, book appointment), clients' custom HTTP functions and MCP servers; `agent.py` runs the call with guardrails (call time limit, silence hang-up, blocked words, apology on failure). |
 | `web/` | Next.js dashboard and API: sign-up, agents, phone numbers, calls, browser test calls, and the owner's admin panel at `/admin`. Database migrations run on startup (`web/lib/migrations.ts`). |
+| `scheduler/` | Scheduling engine (Python/FastAPI): technicians, availability, race-safe holds and bookings, job records. The agent's job-booking tools and the dashboard's Schedule pages use it. See [scheduler/README.md](scheduler/README.md). |
 | `infra/` | Docker Compose for one server: LiveKit, LiveKit SIP, Postgres, Redis, Caddy. |
 | `docs/` | [Deploy on a VPS](docs/deploy-vps.md), [connect Telnyx and Twilio (inbound and outbound)](docs/telephony.md), [Google and Microsoft sign-in and calendars](docs/integrations.md), [webhooks and recordings](docs/webhooks.md), [white label](docs/white-label.md). The REST API reference is built in at `/docs`. |
 

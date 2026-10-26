@@ -2,8 +2,9 @@ import { redisInfo, serverMetrics, services } from "@/lib/admin-metrics";
 import { requireAdmin } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { formatBytes, formatUptime } from "@/lib/format";
+import { cloudConfigured, getMediaServer } from "@/lib/media-server";
 import { Status } from "../status";
-import { runTranscriptPurge } from "./actions";
+import { runTranscriptPurge, switchMediaServer } from "./actions";
 
 const COMMANDS: [string, string][] = [
   ["See what's running", "cd ~/voice/infra && docker compose ps"],
@@ -17,7 +18,7 @@ const COMMANDS: [string, string][] = [
 
 export default async function SystemPage() {
   await requireAdmin();
-  const [svc, server, red, [db], tables, [purge]] = await Promise.all([
+  const [svc, server, red, [db], tables, [purge], mediaServer] = await Promise.all([
     services(),
     serverMetrics(),
     redisInfo(),
@@ -27,7 +28,10 @@ export default async function SystemPage() {
         FROM pg_stat_user_tables ORDER BY pg_total_relation_size(relid) DESC`,
     sql`SELECT count(*)::int AS pending FROM calls c JOIN tenants t ON t.id = c.tenant_id
         WHERE c.transcript_purged_at IS NULL AND c.ended_at < now() - make_interval(days => t.transcript_retention_days)`,
+    getMediaServer(),
   ]);
+  const onCloud = mediaServer === "cloud";
+  const canUseCloud = cloudConfigured();
 
   return (
     <div className="space-y-8">
@@ -47,6 +51,41 @@ export default async function SystemPage() {
           Services are restarted from the server, not from this page: giving the dashboard control of Docker would let anyone who
           breaks into it take over the whole server. Use the commands below over SSH.
         </p>
+      </section>
+
+      <section className="card space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-medium">Media server for browser calls</h2>
+            <p className="text-sm text-muted">
+              Now using <strong className="text-foreground">{onCloud ? "LiveKit Cloud" : "this VPS"}</strong>. Applies to dashboard test
+              calls and website widgets from the next call; calls in progress stay where they are. Phone calls always use this VPS.
+            </p>
+          </div>
+          <form action={switchMediaServer} className="flex items-center gap-3 text-sm">
+            <input type="hidden" name="target" value={onCloud ? "self-hosted" : "cloud"} />
+            <span className={onCloud ? "text-muted" : "font-medium"}>VPS</span>
+            <button
+              role="switch"
+              aria-checked={onCloud}
+              aria-label="Use LiveKit Cloud for browser calls"
+              disabled={!onCloud && !canUseCloud}
+              className={`relative h-6 w-11 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${onCloud ? "bg-foreground" : "bg-black/20 dark:bg-white/20"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${onCloud ? "translate-x-5" : ""}`} />
+            </button>
+            <span className={onCloud ? "font-medium" : "text-muted"}>LiveKit Cloud</span>
+          </form>
+        </div>
+        {!canUseCloud && (
+          <p className="text-xs text-muted">
+            To use LiveKit Cloud, add LIVEKIT_CLOUD_URL, LIVEKIT_CLOUD_API_KEY and LIVEKIT_CLOUD_API_SECRET to infra/.env, add
+            &quot;cloud&quot; to COMPOSE_PROFILES, then run docker compose up -d.
+          </p>
+        )}
+        {onCloud && (
+          <p className="text-xs text-muted">Calls on LiveKit Cloud don&apos;t appear in the live call view on the Overview page.</p>
+        )}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">

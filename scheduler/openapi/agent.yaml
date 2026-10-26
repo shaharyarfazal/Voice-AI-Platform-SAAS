@@ -1,0 +1,1040 @@
+openapi: 3.1.0
+info:
+  title: Voice agent scheduling tools
+  description: 'Tools a voice agent calls on a live call. Authenticate with `Authorization: Bearer <workspace API key>` (vk_…),
+    or for the platform''s own agent `Bearer <INTERNAL_API_TOKEN>` plus `X-Agent-Id`. Times are the business''s local wall
+    time (`slot_id`: YYYY-MM-DDTHH:MM). Every response has `ok`; errors add a stable `code`, a `message` that can be read
+    to the caller and, where useful, `alternatives`.'
+  version: 1.0.0
+paths:
+  /agent/check_availability:
+    post:
+      tags:
+      - agent
+      summary: Check Availability
+      description: Open times for a service, on a day or the next available ones.
+      operationId: check_availability_agent_check_availability_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckAvailabilityIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckAvailabilityOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /agent/hold_slot:
+    post:
+      tags:
+      - agent
+      summary: Hold Slot
+      description: Reserve a slot for a few minutes while the caller's details are collected.
+      operationId: hold_slot_agent_hold_slot_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /agent/book_appointment:
+    post:
+      tags:
+      - agent
+      summary: Book Appointment
+      description: Confirm a held slot with the caller's details. Retrying with the same idempotency_key is safe.
+      operationId: book_appointment_agent_book_appointment_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /agent/find_appointments:
+    post:
+      tags:
+      - agent
+      summary: Find Appointments
+      description: Upcoming appointments booked with a phone number (usually the caller's).
+      operationId: find_appointments_agent_find_appointments_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /agent/reschedule_appointment:
+    post:
+      tags:
+      - agent
+      summary: Reschedule Appointment
+      description: Move an appointment to a new slot from check_availability, in one step.
+      operationId: reschedule_appointment_agent_reschedule_appointment_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RescheduleIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /agent/cancel_appointment:
+    post:
+      tags:
+      - agent
+      summary: Cancel Appointment
+      description: Cancel an appointment, found by id or by phone number (and date).
+      operationId: cancel_appointment_agent_cancel_appointment_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /calls/{call_id}/artifacts:
+    post:
+      tags:
+      - agent
+      summary: Attach Artifacts
+      description: 'Attach a call''s recording (URL or file), transcript and summary. Sent after the call ends; jobs
+
+        booked with this call_id show them in the dashboard.'
+      operationId: attach_artifacts_calls__call_id__artifacts_post
+      parameters:
+      - name: call_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Call Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtifactsOut'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                recording_url:
+                  anyOf:
+                  - maxLength: 2000
+                    pattern: ^https://
+                    type: string
+                  - type: 'null'
+                  title: Recording Url
+                transcript:
+                  anyOf:
+                  - maxLength: 500000
+                    type: string
+                  - type: 'null'
+                  title: Transcript
+                transcript_segments:
+                  anyOf:
+                  - items:
+                      additionalProperties: true
+                      type: object
+                    type: array
+                  - type: 'null'
+                  title: Transcript Segments
+                summary:
+                  anyOf:
+                  - additionalProperties: true
+                    type: object
+                  - type: 'null'
+                  title: Summary
+              title: ArtifactsIn
+              type: object
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                recording:
+                  type: string
+                  format: binary
+                transcript:
+                  type: string
+                summary:
+                  type: string
+                  description: JSON object
+components:
+  schemas:
+    AddressIn:
+      properties:
+        line1:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Line1
+        line2:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Line2
+        city:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: City
+        region:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Region
+        postal_code:
+          anyOf:
+          - type: string
+            maxLength: 20
+          - type: 'null'
+          title: Postal Code
+        country:
+          anyOf:
+          - type: string
+            maxLength: 2
+          - type: 'null'
+          title: Country
+      type: object
+      required:
+      - line1
+      title: AddressIn
+    AppointmentOut:
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+          title: Booking Id
+        confirmation_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Confirmation Code
+        status:
+          type: string
+          title: Status
+        start:
+          type: string
+          title: Start
+        label:
+          type: string
+          title: Label
+        service:
+          type: string
+          title: Service
+        technician_first_name:
+          type: string
+          title: Technician First Name
+        address_short:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address Short
+      type: object
+      required:
+      - booking_id
+      - confirmation_code
+      - status
+      - start
+      - label
+      - service
+      - technician_first_name
+      - address_short
+      title: AppointmentOut
+    ArtifactsOut:
+      properties:
+        ok:
+          type: boolean
+          const: true
+          title: Ok
+          default: true
+        bookings_linked:
+          type: integer
+          title: Bookings Linked
+      type: object
+      required:
+      - bookings_linked
+      title: ArtifactsOut
+    BookIn:
+      properties:
+        hold_id:
+          type: string
+          format: uuid
+          title: Hold Id
+        customer_name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Customer Name
+        phone:
+          type: string
+          maxLength: 40
+          minLength: 3
+          title: Phone
+        address:
+          anyOf:
+          - $ref: '#/components/schemas/AddressIn'
+          - type: string
+          - type: 'null'
+          title: Address
+        issue_description:
+          type: string
+          maxLength: 2000
+          title: Issue Description
+          default: ''
+        urgency:
+          anyOf:
+          - type: string
+            enum:
+            - emergency
+            - standard
+          - type: 'null'
+          title: Urgency
+        call_id:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Call Id
+        email:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Email
+        details:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Details
+          description: Industry-specific job fields
+        idempotency_key:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Idempotency Key
+      type: object
+      required:
+      - hold_id
+      - customer_name
+      - phone
+      - idempotency_key
+      title: BookIn
+    BookOut:
+      properties:
+        ok:
+          type: boolean
+          const: true
+          title: Ok
+          default: true
+        booking_id:
+          type: string
+          format: uuid
+          title: Booking Id
+        confirmation_code:
+          type: string
+          title: Confirmation Code
+        start:
+          type: string
+          title: Start
+        end:
+          type: string
+          title: End
+        date_label:
+          type: string
+          title: Date Label
+        time_window:
+          type: string
+          title: Time Window
+        technician_first_name:
+          type: string
+          title: Technician First Name
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - booking_id
+      - confirmation_code
+      - start
+      - end
+      - date_label
+      - time_window
+      - technician_first_name
+      - message
+      title: BookOut
+    CancelIn:
+      properties:
+        booking_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Booking Id
+        phone:
+          anyOf:
+          - type: string
+            maxLength: 40
+          - type: 'null'
+          title: Phone
+        date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Date
+        reason:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Reason
+        idempotency_key:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Idempotency Key
+      type: object
+      required:
+      - idempotency_key
+      title: CancelIn
+    CancelOut:
+      properties:
+        ok:
+          type: boolean
+          const: true
+          title: Ok
+          default: true
+        booking_id:
+          type: string
+          format: uuid
+          title: Booking Id
+        status:
+          type: string
+          title: Status
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - booking_id
+      - status
+      - message
+      title: CancelOut
+    CheckAvailabilityIn:
+      properties:
+        service:
+          type: string
+          maxLength: 120
+          minLength: 1
+          title: Service
+          description: Service name (e.g. 'AC repair') or id
+        date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Date
+          description: Local date YYYY-MM-DD; omit for the next openings
+        time_window:
+          anyOf:
+          - type: string
+            enum:
+            - morning
+            - afternoon
+            - evening
+            - any
+          - $ref: '#/components/schemas/TimeRange'
+          - type: 'null'
+          title: Time Window
+        address:
+          anyOf:
+          - type: string
+            maxLength: 300
+          - type: 'null'
+          title: Address
+        postal_code:
+          anyOf:
+          - type: string
+            maxLength: 20
+          - type: 'null'
+          title: Postal Code
+        technician:
+          anyOf:
+          - type: string
+            maxLength: 120
+          - type: 'null'
+          title: Technician
+          description: Only if the caller asks for someone
+        urgency:
+          type: string
+          enum:
+          - emergency
+          - standard
+          title: Urgency
+          default: standard
+        limit:
+          type: integer
+          maximum: 10.0
+          minimum: 1.0
+          title: Limit
+          default: 5
+      type: object
+      required:
+      - service
+      title: CheckAvailabilityIn
+    CheckAvailabilityOut:
+      properties:
+        ok:
+          type: boolean
+          const: true
+          title: Ok
+          default: true
+        message:
+          type: string
+          title: Message
+        timezone:
+          type: string
+          title: Timezone
+        service:
+          $ref: '#/components/schemas/ServiceRef'
+        slots:
+          items:
+            $ref: '#/components/schemas/SlotOut'
+          type: array
+          title: Slots
+      type: object
+      required:
+      - message
+      - timezone
+      - service
+      - slots
+      title: CheckAvailabilityOut
+    ErrorOut:
+      properties:
+        ok:
+          type: boolean
+          const: false
+          title: Ok
+          default: false
+        code:
+          type: string
+          title: Code
+        message:
+          type: string
+          title: Message
+        alternatives:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/SlotOut'
+            type: array
+          - type: 'null'
+          title: Alternatives
+      type: object
+      required:
+      - code
+      - message
+      title: ErrorOut
+    FindIn:
+      properties:
+        phone:
+          type: string
+          maxLength: 40
+          minLength: 3
+          title: Phone
+        date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Date
+      type: object
+      required:
+      - phone
+      title: FindIn
+    FindOut:
+      properties:
+        ok:
+          type: boolean
+          const: true
+          title: Ok
+          default: true
+        appointments:
+          items:
+            $ref: '#/components/schemas/AppointmentOut'
+          type: array
+          title: Appointments
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - appointments
+      - message
+      title: FindOut
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HoldIn:
+      properties:
+        slot_id:
+          type: string
+          title: Slot Id
+          description: A slot_id from check_availability
+        service:
+          type: string
+          maxLength: 120
+          minLength: 1
+          title: Service
+        address:
+          anyOf:
+          - type: string
+            maxLength: 300
+          - type: 'null'
+          title: Address
+        postal_code:
+          anyOf:
+          - type: string
+            maxLength: 20
+          - type: 'null'
+          title: Postal Code
+        technician:
+          anyOf:
+          - type: string
+            maxLength: 120
+          - type: 'null'
+          title: Technician
+        urgency:
+          type: string
+          enum:
+          - emergency
+          - standard
+          title: Urgency
+          default: standard
+        call_id:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Call Id
+        idempotency_key:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Idempotency Key
+      type: object
+      required:
+      - slot_id
+      - service
+      title: HoldIn
+    HoldOut:
+      properties:
+        ok:
+          type: boolean
+          const: true
+          title: Ok
+          default: true
+        hold_id:
+          type: string
+          format: uuid
+          title: Hold Id
+        slot_id:
+          type: string
+          title: Slot Id
+        label:
+          type: string
+          title: Label
+        expires_at:
+          type: string
+          title: Expires At
+        expires_in_sec:
+          type: integer
+          title: Expires In Sec
+        technician_first_name:
+          type: string
+          title: Technician First Name
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - hold_id
+      - slot_id
+      - label
+      - expires_at
+      - expires_in_sec
+      - technician_first_name
+      - message
+      title: HoldOut
+    RescheduleIn:
+      properties:
+        booking_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Booking Id
+        phone:
+          anyOf:
+          - type: string
+            maxLength: 40
+          - type: 'null'
+          title: Phone
+        date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Date
+          description: Current appointment date, to find it by phone
+        new_slot_id:
+          type: string
+          title: New Slot Id
+        idempotency_key:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Idempotency Key
+      type: object
+      required:
+      - new_slot_id
+      - idempotency_key
+      title: RescheduleIn
+    ServiceRef:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        duration_min:
+          type: integer
+          title: Duration Min
+      type: object
+      required:
+      - id
+      - name
+      - duration_min
+      title: ServiceRef
+    SlotOut:
+      properties:
+        slot_id:
+          type: string
+          title: Slot Id
+          description: Local start time; pass it to hold_slot
+        start:
+          type: string
+          title: Start
+        end:
+          type: string
+          title: End
+        label:
+          type: string
+          title: Label
+        technicians_available:
+          type: integer
+          title: Technicians Available
+      type: object
+      required:
+      - slot_id
+      - start
+      - end
+      - label
+      - technicians_available
+      title: SlotOut
+    TimeRange:
+      properties:
+        from:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+          title: From
+          examples:
+          - 09:00
+        to:
+          type: string
+          pattern: ^([01]\d|2[0-4]):[0-5]\d$
+          title: To
+          examples:
+          - '12:00'
+      type: object
+      required:
+      - from
+      - to
+      title: TimeRange
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+security:
+- bearer: []
