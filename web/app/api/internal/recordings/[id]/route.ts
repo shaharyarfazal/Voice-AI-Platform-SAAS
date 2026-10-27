@@ -3,13 +3,25 @@ import { mkdir, rename, unlink } from "node:fs/promises";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { isInternalRequest } from "@/lib/auth";
-import { deleteRecording, RECORDINGS_DIR, recordingPath } from "@/lib/recordings";
+import { deleteRecording, RECORDINGS_DIR, recordingPath, recordingUploadUrl } from "@/lib/recordings";
 import { isUuid } from "@/lib/validation";
 
 const MAX_BYTES = 200 * 1024 * 1024; // about 7 hours of 64 kbps MP3
 
-// The agent worker uploads the call recording (MP3, or Ogg if conversion failed) here before
-// reporting the call's end.
+// The agent worker asks here first (POST) where to upload the call recording. With object storage it
+// gets a presigned URL and uploads there directly; otherwise it PUTs the file to this route.
+export async function POST(request: Request, { params }: RouteContext<"/api/internal/recordings/[id]">) {
+  if (!isInternalRequest(request)) return new Response("Unauthorized", { status: 401 });
+  const { id } = await params;
+  if (!isUuid(id)) return new Response("Bad request", { status: 400 });
+  const format = new URL(request.url).searchParams.get("format") === "ogg" ? "ogg" : "mp3";
+  const url = recordingUploadUrl(id, format);
+  if (url) await deleteRecording(id); // a retried upload may arrive in the other format
+  return Response.json({ url });
+}
+
+// Disk storage: the agent worker uploads the call recording (MP3, or Ogg if conversion failed) here
+// before reporting the call's end.
 export async function PUT(request: Request, { params }: RouteContext<"/api/internal/recordings/[id]">) {
   if (!isInternalRequest(request)) return new Response("Unauthorized", { status: 401 });
   const { id } = await params;

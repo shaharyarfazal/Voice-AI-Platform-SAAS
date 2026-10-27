@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "prebuild": "node -e \"require('fs').mkdirSync('public/widget',{recursive:true});require('fs').copyFileSync('node_modules/livekit-client/dist/livekit-client.umd.js','public/widget/livekit-client.umd.js')\""
+    "prebuild": "node -e \"require('fs').mkdirSync('public/widget',{recursive:true});require('fs').copyFileSync('node_modules/livekit-client/dist/livekit-client.umd.js','public/widget/livekit-client.umd.js')\"",
+    "migrate": "tsx --conditions=react-server scripts/migrate.ts",
+    "vercel-build": "npm run migrate && npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
@@ -36,6 +38,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

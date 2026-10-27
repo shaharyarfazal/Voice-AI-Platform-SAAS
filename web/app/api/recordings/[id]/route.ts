@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { findRecording, FORMATS, verifyRecordingSignature } from "@/lib/recordings";
+import { findRecording, FORMATS, recordingObjectUrl, verifyRecordingSignature } from "@/lib/recordings";
 import { isUuid } from "@/lib/validation";
 
 // Call recording download. Works with the signed link from a webhook (no sign-in), or for a
@@ -26,13 +26,18 @@ export async function GET(request: Request, { params }: RouteContext<"/api/recor
   if (!call?.has_recording) return new Response("Not found", { status: 404 });
   const file = await findRecording(id);
   if (!file) return new Response("Not found", { status: 404 });
+  const download = searchParams.get("download") === "1";
+  // Object storage: send the player to a short-lived direct link instead of streaming through here.
+  const direct = recordingObjectUrl(id, file.format, download);
+  if (direct) return new Response(null, { status: 302, headers: { location: direct, "cache-control": "private, no-store" } });
+  if (!file.path) return new Response("Not found", { status: 404 });
   const stream = Readable.toWeb(createReadStream(file.path)) as ReadableStream;
   return new Response(stream, {
     headers: {
       "content-type": FORMATS[file.format],
       "content-length": String(file.size),
       "accept-ranges": "none",
-      "content-disposition": `${searchParams.get("download") === "1" ? "attachment" : "inline"}; filename="call-${id}.${file.format}"`,
+      "content-disposition": `${download ? "attachment" : "inline"}; filename="call-${id}.${file.format}"`,
       "cache-control": "private, no-store",
     },
   });
