@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Icon, type IconName } from "@/components/icons";
+import type { NavGroup } from "@/brands/types";
+import { Icon } from "@/components/icons";
 
-type Item = { href: string; label: string; icon: IconName };
-
-const GROUPS: { label?: string; items: Item[] }[] = [
+const GROUPS: NavGroup[] = [
   {
     items: [
       { href: "/", label: "Overview", icon: "overview" },
@@ -41,11 +40,12 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Nav() {
+/** `extra`: the brand's own groups (brands/<brand>), shown after the main ones. */
+export function Nav({ extra = [] }: { extra?: NavGroup[] }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Main" className="flex flex-col gap-4">
-      {GROUPS.map((g, i) => (
+      {[...GROUPS, ...extra].map((g, i) => (
         <div key={i} className="flex flex-col gap-0.5">
           {g.label && <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">{g.label}</div>}
           {g.items.map((item) => (

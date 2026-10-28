@@ -65,3 +65,17 @@ dashboard is already `noindex`.
 - **White label and reselling:** agencies, sub-accounts, branding and custom domains already exist.
   On Vercel, connecting an agency's custom domain becomes one call to Vercel's domains API from the
   White label page. That replaces the manual Caddy/nginx step.
+
+## Brand modules in the app (today)
+
+Until the package split, a niche's app features live in this repo under `web/brands/<brand>/`, and
+only the deployment whose `BRAND_ID` matches uses them:
+
+- `web/brands/<brand>/index.ts`: the `BrandModule` (see `web/brands/types.ts`): agent templates,
+  setup-wizard industries, billing catalog, extra sidebar links. Register it in `web/brands/index.ts`.
+- `web/app/(app)/<brand>/`: brand-only pages. The folder's layout calls `requireBrand("<brand>")`,
+  so every other deployment answers 404.
+- Admin > Templates edits the templates of the deployment's own brand (stored per brand).
+
+HVAC is the first: `web/brands/hvac` and `web/app/(app)/hvac`. Its marketing website is a separate
+repo (`voice-hvac`) and deploys as its own Vercel project.

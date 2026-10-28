@@ -5,12 +5,11 @@ import { Combobox } from "@/components/combobox";
 import type { Choice } from "@/lib/catalog";
 import { buildStatus, ensureKb, finish, saveBusiness, saveKnowledge, type BuildStatus } from "./actions";
 
-const INDUSTRIES = ["Dental clinic", "Medical clinic", "Salon & spa", "Restaurant", "Real estate", "Law firm", "Home services", "Auto repair", "Fitness", "Hotel", "E-commerce", "Agency", "Other"];
 const STEPS = ["Your business", "What the agents should know", "Building your agents"];
 
 type Initial = { name: string; website: string; industry: string; phone: string; language: string };
 
-export function Wizard({ initial, languages }: { initial: Initial; languages: Choice[] }) {
+export function Wizard({ initial, languages, industries }: { initial: Initial; languages: Choice[]; industries: string[] }) {
   const [step, setStep] = useState(0);
   const [website, setWebsite] = useState(initial.website);
   return (
@@ -23,7 +22,7 @@ export function Wizard({ initial, languages }: { initial: Initial; languages: Ch
           </li>
         ))}
       </ol>
-      {step === 0 && <BusinessStep initial={initial} languages={languages} onDone={(w) => { setWebsite(w); setStep(1); }} />}
+      {step === 0 && <BusinessStep initial={initial} languages={languages} industries={industries} onDone={(w) => { setWebsite(w); setStep(1); }} />}
       {step === 1 && <KnowledgeStep website={website} onBack={() => setStep(0)} onDone={() => setStep(2)} />}
       {step === 2 && <BuildStep />}
     </div>
@@ -34,7 +33,7 @@ function Err({ text }: { text?: string }) {
   return text ? <p className="text-sm text-critical">▲ <span className="text-foreground">{text}</span></p> : null;
 }
 
-function BusinessStep({ initial, languages, onDone }: { initial: Initial; languages: Choice[]; onDone: (website: string) => void }) {
+function BusinessStep({ initial, languages, industries, onDone }: { initial: Initial; languages: Choice[]; industries: string[]; onDone: (website: string) => void }) {
   const [state, action, pending] = useActionState(saveBusiness, undefined);
   const [language, setLanguage] = useState(initial.language);
   const [website, setWebsite] = useState(initial.website);
@@ -66,7 +65,7 @@ function BusinessStep({ initial, languages, onDone }: { initial: Initial; langua
           <label className="label" htmlFor="ob-industry">Industry</label>
           <select className="input" id="ob-industry" name="industry" defaultValue={initial.industry}>
             <option value="">Choose…</option>
-            {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+            {industries.map((i) => <option key={i} value={i}>{i}</option>)}
           </select>
         </div>
         <div className="min-w-0">

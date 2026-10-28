@@ -1,12 +1,14 @@
 import { z } from "zod";
+import { brandModule } from "@/brands";
 
 // What each brand sells: subscription plans (monthly, with included credits) and one-off credit
 // packs. One credit is one minute of voice call time at the default rate; a workspace's
 // `credits_per_minute` can price it differently.
 //
 // Prices are passed to Stripe Checkout as inline price data, so there is nothing to create in the
-// Stripe dashboard first. A brand deployment (HVAC, Limo, ...) overrides the default catalog with the
-// BILLING_CATALOG environment variable (JSON in this shape), or registers its own in code.
+// Stripe dashboard first. A brand (HVAC, Limo, ...) sets its catalog in its module under brands/; a
+// deployment can also override the default catalog with the BILLING_CATALOG environment variable
+// (JSON in this shape).
 
 const PlanSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
@@ -39,6 +41,8 @@ export const CatalogSchema = z.object({
 export type Plan = z.infer<typeof PlanSchema>;
 export type CreditPack = z.infer<typeof PackSchema>;
 export type BillingCatalog = z.infer<typeof CatalogSchema>;
+/** A catalog as written, before CatalogSchema fills in the defaults. */
+export type BillingCatalogInput = z.input<typeof CatalogSchema>;
 
 // Placeholder prices: replace them with your own before launch.
 const DEFAULT_CATALOG: BillingCatalog = CatalogSchema.parse({
@@ -96,8 +100,14 @@ function envCatalog(): BillingCatalog | null {
   return fromEnv;
 }
 
+function moduleCatalog(brand: string): BillingCatalog | undefined {
+  const raw = brandModule(brand).catalog;
+  if (raw && !registered.has(brand)) registered.set(brand, CatalogSchema.parse(raw));
+  return registered.get(brand);
+}
+
 export function catalogFor(brand: string | null | undefined): BillingCatalog {
-  return (brand && registered.get(brand)) || envCatalog() || DEFAULT_CATALOG;
+  return (brand && (registered.get(brand) || moduleCatalog(brand))) || envCatalog() || DEFAULT_CATALOG;
 }
 
 export function findPlan(catalog: BillingCatalog, id: string | null | undefined): Plan | undefined {

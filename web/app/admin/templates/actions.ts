@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { DEFAULT_TEMPLATES, saveTemplates, TemplatesSchema } from "@/lib/templates";
+import { defaultTemplates, saveTemplates, TemplatesSchema } from "@/lib/templates";
 
 export type TemplateState = { error?: string; saved?: boolean } | undefined;
 
@@ -22,6 +22,6 @@ export async function updateTemplates(_: TemplateState, form: FormData): Promise
 
 export async function resetTemplates() {
   await requireAdmin();
-  await saveTemplates(DEFAULT_TEMPLATES);
+  await saveTemplates(defaultTemplates());
   revalidatePath("/admin/templates");
 }

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { brandModule } from "@/brands";
 import { Icon } from "@/components/icons";
 import { getAdminSession, hasRole, requireSession } from "@/lib/auth";
+import { currentBrand } from "@/lib/brand";
 import { fromMilli, total } from "@/lib/billing/credits-math";
 import { walletFor } from "@/lib/billing/wallet";
 import { sql } from "@/lib/db";
@@ -48,7 +50,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <WorkspaceSwitcher current={{ id: session.tenantId, name: tenant?.name ?? "Workspace" }} workspaces={workspaces} />
         </div>
         <div className="flex-1 overflow-y-auto px-2 pb-2">
-          <Nav />
+          <Nav extra={brandModule(currentBrand()).nav} />
         </div>
         <div className="space-y-1 border-t border-border p-2">
           {balance !== null && (

@@ -1,5 +1,7 @@
 import "server-only";
 import { z } from "zod";
+import { brandModule } from "@/brands";
+import { currentBrand } from "./brand";
 import { sql } from "./db";
 
 // Starting prompts for the agents the setup wizard creates. The platform admin edits them under
@@ -77,15 +79,26 @@ export const DEFAULT_TEMPLATES: Templates = {
   },
 };
 
+/** The built-in templates for this deployment's brand. */
+export function defaultTemplates(): Templates {
+  return brandModule(currentBrand()).templates ?? DEFAULT_TEMPLATES;
+}
+
+// Each brand keeps its own edited copy: brands share one database.
+function settingsKey(): string {
+  const brand = currentBrand();
+  return brand === "default" ? "agent_templates" : `agent_templates:${brand}`;
+}
+
 export async function getTemplates(): Promise<Templates> {
-  const [row] = await sql<{ value: unknown }[]>`SELECT value FROM platform_settings WHERE key = 'agent_templates'`;
+  const [row] = await sql<{ value: unknown }[]>`SELECT value FROM platform_settings WHERE key = ${settingsKey()}`;
   const parsed = TemplatesSchema.safeParse(row?.value);
-  return parsed.success ? parsed.data : DEFAULT_TEMPLATES;
+  return parsed.success ? parsed.data : defaultTemplates();
 }
 
 export async function saveTemplates(t: Templates): Promise<void> {
   await sql`
-    INSERT INTO platform_settings (key, value) VALUES ('agent_templates', ${sql.json(t)})
+    INSERT INTO platform_settings (key, value) VALUES (${settingsKey()}, ${sql.json(t)})
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`;
 }
 

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { brandModule } from "@/brands";
 import { hasRole, requireSession } from "@/lib/auth";
+import { currentBrand } from "@/lib/brand";
 import { LANGUAGES } from "@/lib/catalog";
 import { sql } from "@/lib/db";
 import { brandingFor, listWorkspaces } from "@/lib/workspace";
@@ -8,6 +10,8 @@ import { finish } from "./actions";
 import { Wizard } from "./wizard";
 
 export const dynamic = "force-dynamic";
+
+const INDUSTRIES = ["Dental clinic", "Medical clinic", "Salon & spa", "Restaurant", "Real estate", "Law firm", "Home services", "Auto repair", "Fitness", "Hotel", "E-commerce", "Agency", "Other"];
 
 export default async function OnboardingPage() {
   const session = await requireSession();
@@ -46,6 +50,7 @@ export default async function OnboardingPage() {
           language: t.profile.language ?? "en-US",
         }}
         languages={LANGUAGES.map((l) => ({ value: l.code, label: l.label }))}
+        industries={brandModule(currentBrand()).industries ?? INDUSTRIES}
       />
     </main>
   );
