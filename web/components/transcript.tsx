@@ -17,7 +17,7 @@ export function Transcript({ turns, purged }: { turns: Turn[]; purged: boolean }
             <div className="text-xs text-muted">{turn.role === "assistant" ? "Agent" : "Caller"}</div>
             <div
               className={`inline-block rounded-2xl px-3 py-2 text-left text-sm ${
-                turn.role === "assistant" ? "bg-surface" : "bg-accent text-white"
+                turn.role === "assistant" ? "bg-surface" : "bg-accent text-on-accent"
               }`}
             >
               {turn.text}

@@ -319,7 +319,7 @@ export function JobDrawer({ id, labels, canEdit, onClose, onChanged }: { id: str
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={labels.booking}>
       <button className="absolute inset-0 bg-black/30" aria-label="Close" onClick={onClose} />
-      <div className="relative h-full w-full max-w-lg overflow-y-auto border-l border-border bg-background p-5 shadow-xl">
+      <div className="relative h-full w-full max-w-lg overflow-y-auto border-l border-border bg-card p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <Link href={`/schedule/jobs/${id}`} className="text-sm text-accent underline">Open as page</Link>
           <button className="btn-secondary px-2 py-1" onClick={onClose} aria-label="Close">✕</button>

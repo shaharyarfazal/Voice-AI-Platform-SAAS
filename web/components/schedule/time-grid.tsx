@@ -133,7 +133,7 @@ export function TimeGrid({ columns, events, tz, granularity, firstHour, lastHour
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <div style={{ minWidth: Math.max(480, 56 + columns.length * (columns.length > 7 ? 140 : 96)) }}>
-        <div className="sticky top-0 z-20 flex border-b border-border bg-background">
+        <div className="sticky top-0 z-20 flex border-b border-border bg-card">
           <div className="w-14 shrink-0" />
           {columns.map((c) => (
             <div key={c.key} className="min-w-0 flex-1 border-l border-border px-2 py-2 text-center text-xs font-medium">

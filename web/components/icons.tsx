@@ -19,6 +19,12 @@ const PATHS = {
   close: "M18 6 6 18M6 6l12 12",
   coins: "M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM18.1 10.4A6 6 0 1 1 10.3 18M7 6h1v4M16.7 13.9l.7.7-2.8 2.8",
   admin: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  expand: "M4 4h16v16H4zM9 4v16M13 9l3 3-3 3",
+  collapse: "M4 4h16v16H4zM9 4v16M16 9l-3 3 3 3",
+  plus: "M12 5v14M5 12h14",
+  calendar: "M3 5h18v16H3zM16 3v4M8 3v4M3 10h18",
+  arrow: "M7 17 17 7M8 7h9v9",
+  mic: "M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v1a7 7 0 0 1-14 0v-1M12 18v4",
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
 } as const;
 

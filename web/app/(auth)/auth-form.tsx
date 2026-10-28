@@ -21,7 +21,7 @@ export function AuthForm({ mode, termsUrl, privacyUrl, ssoProviders = [], notice
   const [state, action, pending] = useActionState(mode === "login" ? login : signup, undefined);
 
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-12">
+    <main className="mx-auto my-auto flex w-[calc(100%-2rem)] max-w-md flex-col rounded-3xl bg-card p-8 shadow-soft sm:p-10">
       {brand && (
         <div className="mb-8 flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -29,7 +29,7 @@ export function AuthForm({ mode, termsUrl, privacyUrl, ssoProviders = [], notice
           <span className="text-lg font-semibold">{brand.productName}</span>
         </div>
       )}
-      <h1 className="mb-1 text-2xl font-semibold">{mode === "login" ? "Sign in" : "Create your account"}</h1>
+      <h1 className="mb-1 text-3xl font-light tracking-tight">{mode === "login" ? "Sign in" : "Create your account"}</h1>
       <p className="mb-6 text-sm text-muted">{mode === "login" ? "Welcome back." : "Your AI receptionist is a few minutes away."}</p>
       {notice && <p className="mb-4 rounded-lg border border-critical/40 bg-critical/5 p-3 text-sm">{notice}</p>}
       {ssoProviders.length > 0 && (

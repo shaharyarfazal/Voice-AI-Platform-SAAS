@@ -43,7 +43,7 @@ export function HourlyChart({ data }: { data: Point[] }) {
                 />
                 {hover === i && (
                   <div
-                    className={`pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-md border border-border bg-background px-2 py-1 text-xs shadow ${
+                    className={`pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-xs shadow ${
                       i >= data.length - 3 ? "right-0" : i < 3 ? "left-0" : "left-1/2 -translate-x-1/2"
                     }`}
                   >

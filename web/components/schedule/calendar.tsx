@@ -141,7 +141,7 @@ export function ScheduleCalendar({ timezone, labels, services, canEdit }: { time
         <div className="flex rounded-md border border-border p-0.5" role="tablist" aria-label="Calendar view">
           {VIEWS.map((v) => (
             <button key={v.key} role="tab" aria-selected={view === v.key} onClick={() => setView(v.key)}
-              className={`rounded px-3 py-1 text-sm ${view === v.key ? "bg-accent text-white" : "text-muted hover:text-foreground"}`}>
+              className={`rounded px-3 py-1 text-sm ${view === v.key ? "bg-accent text-on-accent" : "text-muted hover:text-foreground"}`}>
               {v.key === "team" ? labels.staff_plural : v.label}
             </button>
           ))}
@@ -234,7 +234,7 @@ function MonthGrid({ first, days, anchor, tz, events, colorFor, onDay, onEvent }
           const list = (byDay.get(day) ?? []).sort((a, b) => a.start.localeCompare(b.start));
           return (
             <div key={day} className={`min-h-24 border-b border-l border-border p-1 first:border-l-0 ${day.slice(0, 7) !== month ? "bg-surface/60" : ""}`}>
-              <button onClick={() => onDay(day)} className={`mb-1 rounded px-1 text-xs ${day === now ? "bg-accent text-white" : "text-muted hover:text-foreground"}`}>
+              <button onClick={() => onDay(day)} className={`mb-1 rounded px-1 text-xs ${day === now ? "bg-accent text-on-accent" : "text-muted hover:text-foreground"}`}>
                 {Number(day.slice(8))}
               </button>
               <div className="space-y-0.5">

@@ -72,7 +72,7 @@ export default async function SystemPage() {
               disabled={!onCloud && !canUseCloud}
               className={`relative h-6 w-11 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${onCloud ? "bg-foreground" : "bg-black/20 dark:bg-white/20"}`}
             >
-              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${onCloud ? "translate-x-5" : ""}`} />
+              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-card shadow transition-transform ${onCloud ? "translate-x-5" : ""}`} />
             </button>
             <span className={onCloud ? "font-medium" : "text-muted"}>LiveKit Cloud</span>
           </form>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NavGroup } from "@/brands/types";
 import { Icon } from "@/components/icons";
 
@@ -36,22 +36,30 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
+/** Remembers whether the desktop sidebar shows labels; read by the layout so the first paint matches. */
+export const RAIL_COOKIE = "rail";
+
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** `extra`: the brand's own groups (brands/<brand>), shown after the main ones. */
+/**
+ * `extra`: the brand's own groups (brands/<brand>), shown after the main ones.
+ * Links use the default prefetch: dynamic pages prefetch only up to their loading state, so a page
+ * load no longer renders every page in the sidebar on the server.
+ */
 export function Nav({ extra = [] }: { extra?: NavGroup[] }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="flex flex-col gap-4">
+    <nav aria-label="Main" className="flex flex-col gap-3">
       {[...GROUPS, ...extra].map((g, i) => (
-        <div key={i} className="flex flex-col gap-0.5">
-          {g.label && <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">{g.label}</div>}
+        <div key={i} className="flex flex-col gap-1">
+          {g.label && <div className="rail-label px-3 pb-0.5 text-[11px] font-medium tracking-wide text-muted uppercase">{g.label}</div>}
+          {i > 0 && <div aria-hidden className="rail-divider mx-auto my-1 hidden h-px w-6 bg-border" />}
           {g.items.map((item) => (
-            <Link key={item.href} href={item.href} prefetch className="nav-link" aria-current={isActive(pathname, item.href) ? "page" : undefined}>
-              <Icon name={item.icon} className="h-4 w-4 shrink-0" />
-              {item.label}
+            <Link key={item.href} href={item.href} className="nav-link rail-item" data-tip={item.label} aria-current={isActive(pathname, item.href) ? "page" : undefined}>
+              <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
+              <span className="rail-label truncate">{item.label}</span>
             </Link>
           ))}
         </div>
@@ -60,13 +68,20 @@ export function Nav({ extra = [] }: { extra?: NavGroup[] }) {
   );
 }
 
-/** Phones: a top bar with a menu button; the sidebar slides in as a drawer. */
-export function MobileShell({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
+/**
+ * Desktop: a slim icon rail (labels on hover) that can expand to show labels.
+ * Phones: a top bar with a menu button; the sidebar slides in as a drawer, always labelled.
+ */
+export function MobileShell({ title, children, initialCollapsed = true }: { title: React.ReactNode; children: React.ReactNode; initialCollapsed?: boolean }) {
   const pathname = usePathname();
   // Remembering where the drawer was opened closes it as soon as a link navigates elsewhere.
   const [openOn, setOpenOn] = useState<string | null>(null);
   const open = openOn === pathname;
   const setOpen = (value: boolean) => setOpenOn(value ? pathname : null);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const aside = useRef<HTMLElement>(null);
+  const [tip, setTip] = useState<{ text: string; top: number; left: number } | null>(null);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpenOn(null);
@@ -78,24 +93,69 @@ export function MobileShell({ title, children }: { title: React.ReactNode; child
     };
   }, [open]);
 
+  // Labels for the icon rail. A fixed tooltip, because the rail scrolls and would clip one inside it.
+  useEffect(() => {
+    const el = aside.current;
+    if (!el || !collapsed) return;
+    const show = (e: Event) => {
+      const target = (e.target as HTMLElement).closest<HTMLElement>("[data-tip]");
+      if (!target || !window.matchMedia("(min-width: 48rem)").matches) return setTip(null);
+      const r = target.getBoundingClientRect();
+      setTip({ text: target.dataset.tip!, top: r.top + r.height / 2, left: r.right + 10 });
+    };
+    const hide = () => setTip(null);
+    el.addEventListener("mouseover", show);
+    el.addEventListener("focusin", show);
+    el.addEventListener("mouseleave", hide);
+    el.addEventListener("focusout", hide);
+    el.addEventListener("scroll", hide, true);
+    return () => {
+      el.removeEventListener("mouseover", show);
+      el.removeEventListener("focusin", show);
+      el.removeEventListener("mouseleave", hide);
+      el.removeEventListener("focusout", hide);
+      el.removeEventListener("scroll", hide, true);
+    };
+  }, [collapsed]);
+
+  function toggle() {
+    const next = !collapsed;
+    setCollapsed(next);
+    setTip(null);
+    document.cookie = `${RAIL_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
+  }
+
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
         <div className="min-w-0 truncate text-sm font-semibold">{title}</div>
-        <button type="button" className="rounded-md p-2 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
+        <button type="button" className="icon-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
           <Icon name="menu" className="h-5 w-5" />
         </button>
       </div>
       {open && <div className="fixed inset-0 z-40 bg-black/40 md:hidden" aria-hidden onClick={() => setOpen(false)} />}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface transition-transform md:sticky md:top-0 md:z-auto md:h-screen md:w-60 md:max-w-none md:shrink-0 md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        ref={aside}
+        data-rail={collapsed ? "collapsed" : "expanded"}
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-background transition-[transform,width] md:sticky md:top-3 md:z-auto md:h-[calc(100vh-1.5rem)] md:max-w-none md:shrink-0 md:translate-x-0 md:bg-transparent ${collapsed ? "md:w-[84px]" : "md:w-60"} ${open ? "translate-x-0" : "-translate-x-full"}`}
         aria-label="Sidebar"
       >
-        <button type="button" className="absolute top-3 right-3 rounded-md p-2 hover:bg-black/5 md:hidden dark:hover:bg-white/10" aria-label="Close menu" onClick={() => setOpen(false)}>
+        <button type="button" className="icon-btn absolute top-3 right-3 md:hidden" aria-label="Close menu" onClick={() => setOpen(false)}>
           <Icon name="close" className="h-5 w-5" />
         </button>
         {children}
+        <div className="hidden px-3 pb-4 md:block">
+          <button type="button" onClick={toggle} className="nav-link rail-item w-full" data-tip="Show labels" aria-label={collapsed ? "Show sidebar labels" : "Hide sidebar labels"} aria-pressed={!collapsed}>
+            <Icon name={collapsed ? "expand" : "collapse"} className="h-[18px] w-[18px] shrink-0" />
+            <span className="rail-label">Collapse</span>
+          </button>
+        </div>
       </aside>
+      {tip && (
+        <div role="tooltip" className="pointer-events-none fixed z-[60] -translate-y-1/2 rounded-full bg-accent px-3 py-1.5 text-xs font-medium whitespace-nowrap text-on-accent shadow-soft" style={{ top: tip.top, left: tip.left }}>
+          {tip.text}
+        </div>
+      )}
     </>
   );
 }

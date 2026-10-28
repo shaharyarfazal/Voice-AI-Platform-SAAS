@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 export function SubNav({ items }: { items: { href: string; label: string }[] }) {
   const pathname = usePathname();
   return (
-    <nav className="flex overflow-x-auto border-b border-border" aria-label="Section">
+    <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Section">
       {items.map((i) => {
         const active = pathname === i.href;
         return (

@@ -33,7 +33,7 @@ export function CreateKeyForm() {
         <div className="space-y-2 rounded-lg border border-accent/40 bg-accent/5 p-4">
           <p className="text-sm font-medium">Key &ldquo;{state.name}&rdquo; created. Copy it now: it won&apos;t be shown again.</p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-background px-3 py-2 font-mono text-xs" aria-label="API key">
+            <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-card px-3 py-2 font-mono text-xs" aria-label="API key">
               {shown ? state.key : `${state.key.slice(0, 12)}${"•".repeat(28)}`}
             </code>
             <CopyButton value={state.key} label="Copy key" className="btn" />

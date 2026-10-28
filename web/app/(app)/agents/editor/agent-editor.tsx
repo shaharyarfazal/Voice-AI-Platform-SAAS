@@ -120,7 +120,7 @@ export function AgentEditor({ id, initial, context }: { id?: string; initial: Ed
       {id && <input type="hidden" name="id" value={id} />}
       <input type="hidden" name="payload" value={payload} readOnly />
 
-      <div className="flex overflow-x-auto border-b border-border" role="tablist">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist">
         {TABS.filter((t) => !(chat && t.id === "after")).map((t) => (
           <button key={t.id} type="button" role="tab" className="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
             {chat && t.id === "voice" ? "AI model & language" : chat && t.id === "tools" ? "Knowledge & tools" : t.label}

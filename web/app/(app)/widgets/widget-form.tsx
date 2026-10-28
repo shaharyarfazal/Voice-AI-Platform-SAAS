@@ -97,7 +97,7 @@ export function WidgetForm({ id, agents, initial }: { id?: string; agents: { id:
           </div>
         </div>
         <div aria-hidden className="flex flex-col items-end justify-end gap-3 rounded-xl bg-surface p-4">
-          <div className="w-full overflow-hidden rounded-xl bg-background shadow">
+          <div className="w-full overflow-hidden rounded-xl bg-card shadow">
             <div className="p-3 text-white" style={{ background: color }}>
               <div className="text-sm font-semibold">{title || "Chat with us"}</div>
             </div>

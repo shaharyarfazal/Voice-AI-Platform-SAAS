@@ -1,43 +1,71 @@
 @import "tailwindcss";
 
+/*
+ * Theme: a light grey canvas, white cards, near-black ink for text and primary actions, and one
+ * lime highlight that means "look here" (the live state, the data point that matters). Hierarchy
+ * comes from size: big light numbers and titles, small muted labels.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --surface: #f7f7f8;
-  --accent: #2563eb;
-  /* Chart tokens (dataviz reference palette: series slot 1, status good/critical). */
-  --series-1: #2a78d6;
-  --status-good: #0ca30c;
-  --status-critical: #d03b3b;
-  --grid: #e7e5e0;
+  --canvas: #e4e6e1; /* behind the app frame */
+  --background: #f3f4f0; /* the app frame */
+  --card: #ffffff;
+  --foreground: #141513;
+  --muted: #5f635c; /* 5.6:1 on white: small labels stay readable */
+  --border: #e3e5df;
+  --surface: #f0f1ec;
+  /* Primary actions and selected states. A workspace's brand colour replaces it. */
+  --accent: #141513;
+  --on-accent: #ffffff;
+  /* The single highlight. Only ever a fill behind dark text, never text on white. */
+  --lime: #d4f24a;
+  --on-lime: #1b2200;
+  /* Chart tokens: one ink series, hatched; the lime marks the point that matters. */
+  --series-1: #2b2d29;
+  --status-good: #1f8a3a;
+  --status-critical: #c93636;
+  --grid: #e6e7e2;
+  --shadow: 0 1px 2px rgb(20 21 19 / 0.04), 0 8px 24px -12px rgb(20 21 19 / 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --muted: #9ca3af;
-    --border: #27272a;
-    --surface: #141416;
-    --accent: #3b82f6;
-    --series-1: #3987e5;
-    --grid: #2e2e2b;
+    --canvas: #090a09;
+    --background: #111210;
+    --card: #191a18;
+    --foreground: #eeefeb;
+    --muted: #a1a59c;
+    --border: #2a2c28;
+    --surface: #20221f;
+    --accent: #eeefeb;
+    --on-accent: #141513;
+    --lime: #d4f24a;
+    --on-lime: #1b2200;
+    --series-1: #d9dbd4;
+    --status-good: #4cc16a;
+    --status-critical: #e86a6a;
+    --grid: #2a2c28;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
   }
 }
 
 @theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-canvas: var(--canvas);
   --color-background: var(--background);
+  --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-surface: var(--surface);
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-lime: var(--lime);
+  --color-on-lime: var(--on-lime);
   --color-series-1: var(--series-1);
   --color-good: var(--status-good);
   --color-critical: var(--status-critical);
   --color-grid: var(--grid);
+  --shadow-soft: var(--shadow);
 }
 
 /* Fieldsets default to min-width: min-content, which lets long dropdown labels widen the page on phones. */
@@ -46,61 +74,104 @@ fieldset {
 }
 
 body {
-  background: var(--background);
+  background: var(--canvas);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
 }
 
 @layer components {
   .input {
-    @apply w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30;
+    @apply w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none transition focus:border-foreground/40 focus:ring-4 focus:ring-lime/50;
   }
   .hint {
     @apply mt-1 text-xs text-muted;
   }
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-medium;
   }
   .nav-link {
-    @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted transition hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10;
+    @apply flex items-center gap-3 rounded-full px-3 py-2 text-sm text-muted transition hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10;
   }
   .nav-link[aria-current="page"] {
-    @apply bg-black/5 font-medium text-foreground dark:bg-white/10;
+    @apply bg-accent font-medium text-on-accent hover:bg-accent hover:text-on-accent;
   }
+  /* Section tabs: pills, the selected one solid. */
   .tab {
-    @apply -mb-px whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm text-muted transition hover:text-foreground;
+    @apply whitespace-nowrap rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted transition hover:border-foreground/30 hover:text-foreground;
   }
   .tab[aria-selected="true"] {
-    @apply border-accent font-medium text-foreground;
+    @apply border-accent bg-accent font-medium text-on-accent;
   }
   .toggle-row {
-    @apply flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.03];
+    @apply flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-foreground/25;
   }
   .label {
-    @apply mb-1 block text-sm font-medium;
+    @apply mb-1.5 block text-sm font-medium;
   }
   .btn {
-    @apply inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-medium transition hover:border-foreground/30 active:scale-[0.98] disabled:opacity-50;
+  }
+  /* The one call to action that should catch the eye on a screen (e.g. starting a test call). */
+  .btn-lime {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-lime px-5 py-2.5 text-sm font-semibold text-on-lime shadow-soft transition hover:brightness-95 active:scale-[0.98] disabled:opacity-60;
+  }
+  .icon-btn {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:border-foreground/30;
   }
   .card {
-    @apply rounded-xl border border-border bg-background p-5;
+    @apply rounded-3xl border border-border/70 bg-card p-6 shadow-soft;
   }
   .page-title {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-3xl font-light tracking-tight md:text-4xl;
   }
   .page-sub {
-    @apply mt-1 text-sm text-muted;
+    @apply mt-2 text-sm text-muted;
+  }
+  /* Big headline numbers on cards. */
+  .metric {
+    @apply text-4xl font-light tracking-tight tabular-nums md:text-5xl;
+  }
+  .eyebrow {
+    @apply text-xs font-medium tracking-wide text-muted uppercase;
   }
   .table {
     @apply w-full text-left text-sm;
   }
   .table th {
-    @apply border-b border-border py-2 pr-4 font-medium text-muted;
+    @apply border-b border-border py-2.5 pr-4 text-xs font-medium tracking-wide text-muted uppercase;
   }
   .table td {
-    @apply border-b border-border py-2 pr-4;
+    @apply border-b border-border py-3 pr-4;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  /* Collapsed desktop sidebar: round icon buttons only; labels show as tooltips. */
+  @media (min-width: 48rem) {
+    [data-rail="collapsed"] .rail-label {
+      display: none;
+    }
+    [data-rail="collapsed"] .rail-divider {
+      display: block;
+    }
+    [data-rail="collapsed"] .rail-item {
+      @apply mx-auto h-11 w-11 justify-center gap-0 p-0;
+    }
+  }
+  /* The agent's voice bars in a test call: grey at rest, ink while it talks. */
+  .test-call-bars {
+    --lk-bg: transparent;
+    --lk-fg: var(--foreground);
+    --lk-va-bar-bg: var(--border);
+    --lk-va-bar-gap: 5px;
+    --lk-va-bar-width: 8px;
+  }
+  /* Monochrome diagonal hatching for chart fills (lime stays solid for emphasis). */
+  .hatch {
+    background-image: repeating-linear-gradient(135deg, var(--series-1) 0 1.5px, transparent 1.5px 6px);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 35%, transparent);
   }
 }

@@ -24,8 +24,8 @@ export default async function ChatPage({ params }: PageProps<"/calls/chats/[id]"
       <div className="space-y-3">
         {chat.messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${m.role === "user" ? "bg-accent text-white" : "bg-surface"}`}>
-              <span className={`mb-0.5 block text-xs ${m.role === "user" ? "text-white/80" : "text-muted"}`}>{m.role === "user" ? "Visitor" : "Chatbot"}</span>
+            <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${m.role === "user" ? "bg-accent text-on-accent" : "bg-surface"}`}>
+              <span className={`mb-0.5 block text-xs ${m.role === "user" ? "text-on-accent/70" : "text-muted"}`}>{m.role === "user" ? "Visitor" : "Chatbot"}</span>
               {m.content}
             </div>
           </div>

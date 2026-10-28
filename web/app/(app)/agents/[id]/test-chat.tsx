@@ -54,7 +54,7 @@ export function TestChat({ agentId }: { agentId: string }) {
           <div className="max-h-96 space-y-2 overflow-y-auto pr-1" aria-live="polite">
             {lines.map((l, i) => (
               <div key={i} className={`flex ${l.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${l.role === "user" ? "bg-accent text-white" : "bg-surface"}`}>{l.content}</div>
+                <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${l.role === "user" ? "bg-accent text-on-accent" : "bg-surface"}`}>{l.content}</div>
               </div>
             ))}
             {pending && <div className="text-sm text-muted">Typing…</div>}
