@@ -1,5 +1,7 @@
 import "server-only";
 import type { FullAgentRow } from "../agent-runtime-config";
+import { afterSpend } from "../billing/stripe";
+import { canSpend, chargeChatReply } from "../billing/wallet";
 import { sql } from "../db";
 import { runChat, type ChatMessage } from "./engine";
 
@@ -41,6 +43,7 @@ export async function sendChatMessage(sessionId: string, tenantId: string, text:
   if (session.user_count >= MAX_USER_MESSAGES) return { error: "This conversation is too long. Start a new one.", status: 429 };
   const agent = await loadChatAgent(session.agent_id);
   if (!agent || agent.tenant_status !== "active") return { error: "This assistant isn't available", status: 404 };
+  if (!(await canSpend(agent.tenant_id)).ok) return { error: "This assistant isn't available right now", status: 402 };
 
   const userMessage: ChatMessage = { role: "user", content, at: new Date().toISOString() };
   const result = await runChat(agent, [...session.messages, userMessage], { sessionId, visitor: session.visitor });
@@ -53,5 +56,8 @@ export async function sendChatMessage(sessionId: string, tenantId: string, text:
       output_tokens = output_tokens + ${result.outputTokens},
       last_message_at = now()
     WHERE id = ${sessionId}`;
+  // The ref is the reply's position in the conversation, so a retried request isn't charged twice.
+  const wallet = await chargeChatReply(agent.tenant_id, `${sessionId}:${session.messages.length + 1}`);
+  if (wallet) void afterSpend(wallet.tenantId);
   return { reply: result.reply };
 }

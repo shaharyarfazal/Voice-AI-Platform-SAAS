@@ -123,6 +123,11 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       # Scheduling engine (the Schedule pages talk to it through the web app).
       SCHEDULER_URL: http://127.0.0.1:8100
+      # Credits and payments (Stripe Checkout). Without STRIPE_SECRET_KEY billing stays manual.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      BRAND_ID: ${BRAND_ID:-default}
+      BILLING_CATALOG: ${BILLING_CATALOG:-}
       SCHED_JWT_SECRET: ${SCHED_JWT_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}

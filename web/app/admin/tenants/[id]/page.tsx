@@ -5,7 +5,8 @@ import { sql } from "@/lib/db";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { isUuid } from "@/lib/validation";
 import { deleteClient } from "../actions";
-import { ClientSettingsForm, type ClientFormValues } from "../forms";
+import { fromMilli } from "@/lib/billing/credits-math";
+import { ClientCreditsForm, ClientSettingsForm, type ClientFormValues } from "../forms";
 
 export default async function TenantPage({ params, searchParams }: PageProps<"/admin/tenants/[id]">) {
   const admin = await requireAdmin();
@@ -13,9 +14,10 @@ export default async function TenantPage({ params, searchParams }: PageProps<"/a
   const deleteMismatch = (await searchParams).delete === "mismatch";
   if (!isUuid(id)) notFound();
 
-  const [tenant] = await sql<(ClientFormValues & { created_at: Date })[]>`
+  const [tenant] = await sql<(ClientFormValues & { created_at: Date; billing_mode: string; credits_per_minute: string; balance_milli: string; parent_id: string | null })[]>`
     SELECT id, name, status, price_per_minute::text, monthly_fee::text, monthly_minute_limit,
-           transcript_retention_days, notes, created_at
+           transcript_retention_days, notes, created_at, billing_mode, credits_per_minute::text,
+           (plan_credits_milli + paid_credits_milli)::text AS balance_milli, parent_id
     FROM tenants WHERE id = ${id}`;
   if (!tenant) notFound();
 
@@ -37,6 +39,15 @@ export default async function TenantPage({ params, searchParams }: PageProps<"/a
       </div>
 
       <ClientSettingsForm client={tenant} />
+      <ClientCreditsForm
+        client={{
+          id: tenant.id,
+          billingMode: tenant.billing_mode,
+          creditsPerMinute: tenant.credits_per_minute,
+          balance: tenant.billing_mode === "parent" ? "agency's" : fromMilli(Number(tenant.balance_milli)).toLocaleString("en-US", { maximumFractionDigits: 1 }),
+          isSubAccount: tenant.parent_id !== null,
+        }}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="card">

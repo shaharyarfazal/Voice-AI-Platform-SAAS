@@ -4,8 +4,19 @@ declare global {
   var __sql: ReturnType<typeof postgres> | undefined;
 }
 
+// Serverless functions each hold their own pool, so they keep it small and close idle connections;
+// point DATABASE_URL at the provider's connection pooler (Neon, Supabase) there. Transaction-mode
+// poolers (PgBouncer, Supabase port 6543) don't support prepared statements: set DATABASE_PREPARE=false.
+const serverless = Boolean(process.env.VERCEL);
+const options = {
+  max: Number(process.env.DATABASE_POOL_MAX) || (serverless ? 3 : 10),
+  idle_timeout: serverless ? 20 : undefined,
+  prepare: process.env.DATABASE_PREPARE !== "false",
+  onnotice: () => {},
+};
+
 // Reuse one pool across hot reloads in development.
-export const sql = globalThis.__sql ?? postgres(process.env.DATABASE_URL!, { max: 10, onnotice: () => {} });
+export const sql = globalThis.__sql ?? postgres(process.env.DATABASE_URL!, options);
 if (process.env.NODE_ENV !== "production") globalThis.__sql = sql;
 
 export type AgentRow = {

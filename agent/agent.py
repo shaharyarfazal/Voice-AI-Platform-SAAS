@@ -103,7 +103,7 @@ async def _post(path: str, payload: dict, timeout: float = 10.0) -> None:
 
 
 async def upload_recording(call_id: str, path) -> None:
-    """Converts the call recording to MP3 and sends it to the web app, which stores and serves it."""
+    """Converts the call recording to MP3 and uploads it to object storage or the web app."""
     try:
         if not path.exists() or path.stat().st_size == 0:
             return
@@ -113,12 +113,22 @@ async def upload_recording(call_id: str, path) -> None:
         except Exception:
             logger.exception("MP3 conversion failed; uploading the original Ogg recording")
             content_type = "audio/ogg"
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            res = await client.put(
-                f"{WEB_API_URL}/api/internal/recordings/{call_id}",
-                content=path.read_bytes(),
-                headers={**AUTH, "content-type": content_type},
-            )
+        fmt = "ogg" if content_type == "audio/ogg" else "mp3"
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            # With object storage the web app hands out a presigned URL and the file goes straight
+            # there (serverless hosts limit request size); otherwise it is uploaded to the web app.
+            target = None
+            ask = await client.post(f"{WEB_API_URL}/api/internal/recordings/{call_id}?format={fmt}", headers=AUTH)
+            if ask.status_code == 200:
+                target = ask.json().get("url")
+            if target:
+                res = await client.put(target, content=path.read_bytes(), headers={"content-type": content_type})
+            else:
+                res = await client.put(
+                    f"{WEB_API_URL}/api/internal/recordings/{call_id}",
+                    content=path.read_bytes(),
+                    headers={**AUTH, "content-type": content_type},
+                )
             res.raise_for_status()
     except Exception:
         logger.exception("could not upload the recording for call %s", call_id)

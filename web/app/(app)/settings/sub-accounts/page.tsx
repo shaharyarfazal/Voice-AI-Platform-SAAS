@@ -9,8 +9,10 @@ import { SubAccountForm } from "./sub-account-form";
 export default async function SubAccountsPage() {
   const session = await requireRole("admin");
   if (!(await isTopLevel(session.tenantId))) notFound();
-  const children = await sql<{ id: string; name: string; status: string; created_at: Date; members: number; agents: number; minutes: number }[]>`
-    SELECT t.id, t.name, t.status, t.created_at,
+  const children = await sql<{ id: string; name: string; status: string; created_at: Date; members: number; agents: number; minutes: number; credits: number; billing_mode: string }[]>`
+    SELECT t.id, t.name, t.status, t.created_at, t.billing_mode,
+      (SELECT coalesce(-sum(l.plan_delta_milli + l.paid_delta_milli), 0)::float / 1000 FROM credit_ledger l
+        WHERE l.used_by = t.id AND l.created_at >= date_trunc('month', now())) AS credits,
       (SELECT count(*)::int FROM memberships m WHERE m.tenant_id = t.id) AS members,
       (SELECT count(*)::int FROM agents a WHERE a.tenant_id = t.id) AS agents,
       (SELECT coalesce(sum(duration_seconds), 0)::int / 60 FROM calls c WHERE c.tenant_id = t.id AND c.started_at >= date_trunc('month', now())) AS minutes
@@ -19,8 +21,8 @@ export default async function SubAccountsPage() {
   return (
     <div className="space-y-8">
       <p className="text-sm text-muted">
-        Give each of your clients their own workspace. They see your branding (set it under White label), and you can open any of
-        them from the workspace switcher.
+        Give each of your clients their own workspace. They see your branding (set it under White label), their calls and chats
+        use your workspace&apos;s credits, and you can open any of them from the workspace switcher.
       </p>
       <SubAccountForm />
       <section className="space-y-3">
@@ -30,7 +32,7 @@ export default async function SubAccountsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="table">
-              <thead><tr><th>Workspace</th><th>Members</th><th>Agents</th><th>Minutes this month</th><th><span className="sr-only">Open</span></th></tr></thead>
+              <thead><tr><th>Workspace</th><th>Members</th><th>Agents</th><th>Minutes this month</th><th>Credits used</th><th><span className="sr-only">Open</span></th></tr></thead>
               <tbody>
                 {children.map((c) => (
                   <tr key={c.id}>
@@ -41,6 +43,7 @@ export default async function SubAccountsPage() {
                     <td className="tabular-nums">{c.members}</td>
                     <td className="tabular-nums">{c.agents}</td>
                     <td className="tabular-nums">{c.minutes}</td>
+                    <td className="tabular-nums">{c.billing_mode === "parent" ? c.credits.toLocaleString("en-US", { maximumFractionDigits: 1 }) : "Own billing"}</td>
                     <td className="text-right">
                       <form action={switchWorkspace}>
                         <input type="hidden" name="tenantId" value={c.id} />

@@ -1,5 +1,7 @@
 import { isInternalRequest } from "@/lib/auth";
 import { buildRuntimeConfig, type FullAgentRow } from "@/lib/agent-runtime-config";
+import { affordableSeconds } from "@/lib/billing/credits-math";
+import { canSpend } from "@/lib/billing/wallet";
 import { sql } from "@/lib/db";
 import { isUuid } from "@/lib/validation";
 
@@ -11,7 +13,8 @@ type AgentWithTenant = FullAgentRow & {
 };
 
 // Called by the agent worker at the start of every call. A 404 makes the agent hang up before
-// any AI provider is used: unknown number, suspended tenant, or monthly minute limit reached.
+// any AI provider is used: unknown number, suspended tenant, monthly minute limit reached, or no
+// credits left. With credits, the call's time limit is capped at what the balance pays for.
 export async function GET(request: Request) {
   if (!isInternalRequest(request)) return new Response("Unauthorized", { status: 401 });
 
@@ -38,5 +41,12 @@ export async function GET(request: Request) {
     return new Response("Monthly minute limit reached", { status: 404 });
   }
 
-  return Response.json(await buildRuntimeConfig(agent));
+  const { ok, wallet } = await canSpend(agent.tenant_id);
+  if (!ok) return new Response("Out of credits", { status: 404 });
+
+  const config = await buildRuntimeConfig(agent);
+  if (wallet && wallet.mode !== "manual") {
+    config.guardrails.maxCallSeconds = affordableSeconds(wallet.balances, wallet.creditsPerMinute, config.guardrails.maxCallSeconds);
+  }
+  return Response.json(config);
 }

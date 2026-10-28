@@ -144,7 +144,8 @@ export async function createSubAccount(_: InviteState, form: FormData): Promise<
   const email = form.get("email")?.toString().trim().toLowerCase() ?? "";
   if (email && !z.email().safeParse(email).success) return { error: `"${email}" isn't an email address.` };
 
-  const [child] = await sql<{ id: string }[]>`INSERT INTO tenants (name, parent_id) VALUES (${name}, ${session.tenantId}) RETURNING id`;
+  const [child] = await sql<{ id: string }[]>`INSERT INTO tenants (name, parent_id, brand, billing_mode)
+    SELECT ${name}, id, brand, 'parent' FROM tenants WHERE id = ${session.tenantId} RETURNING id`;
   if (!email) {
     revalidatePath("/settings/sub-accounts");
     return { links: [] };

@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { sql } from "../db";
 import { fetchPublic } from "../net";
 import { chunkText } from "./chunk";
@@ -110,21 +111,55 @@ async function processSource(id: string): Promise<void> {
 
 let running = 0;
 const CONCURRENCY = 2;
+/** A source "processing" for longer than this was cut off (restart, serverless timeout) and is retried. */
+const STALE_MINUTES = 20;
+
+async function claimNext(): Promise<string | null> {
+  const [next] = await sql<{ id: string }[]>`
+    UPDATE kb_sources SET status = 'processing', updated_at = now()
+    WHERE id = (SELECT id FROM kb_sources WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
+    RETURNING id`;
+  return next?.id ?? null;
+}
+
+/** Processes queued sources one after another until the queue is empty or the deadline passes. */
+export async function drainQueue(deadline: number): Promise<number> {
+  let done = 0;
+  while (Date.now() < deadline) {
+    const id = await claimNext();
+    if (!id) break;
+    await processSource(id);
+    done++;
+  }
+  return done;
+}
+
+/** Puts sources that were cut off mid-processing back in the queue. */
+export async function requeueStale(): Promise<number> {
+  const rows = await sql`
+    UPDATE kb_sources SET status = 'queued'
+    WHERE status = 'processing' AND updated_at < now() - make_interval(mins => ${STALE_MINUTES})
+    RETURNING id`;
+  return rows.length;
+}
 
 /** Starts processing queued sources, if not already at capacity. */
 export function kick(): void {
+  if (process.env.VERCEL) {
+    // Serverless: work only runs while a request is alive, so keep this request alive to process the
+    // queue; whatever is left is picked up by the /api/cron/knowledge job.
+    try {
+      after(() => drainQueue(Date.now() + 240_000).catch((e) => console.error("knowledge: queue error", e)));
+    } catch {
+      // Outside a request; the cron job will process it.
+    }
+    return;
+  }
   while (running < CONCURRENCY) {
     running++;
     void (async () => {
       try {
-        for (;;) {
-          const [next] = await sql<{ id: string }[]>`
-            UPDATE kb_sources SET status = 'processing', updated_at = now()
-            WHERE id = (SELECT id FROM kb_sources WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
-            RETURNING id`;
-          if (!next) return;
-          await processSource(next.id);
-        }
+        await drainQueue(Number.POSITIVE_INFINITY);
       } catch (e) {
         console.error("knowledge: queue error", e);
       } finally {

@@ -21,7 +21,7 @@ Browser test call ─────WebRTC─────────────�
 | `web/` | Next.js dashboard and API: sign-up, agents, phone numbers, calls, browser test calls, and the owner's admin panel at `/admin`. Database migrations run on startup (`web/lib/migrations.ts`). |
 | `scheduler/` | Scheduling engine (Python/FastAPI): technicians, availability, race-safe holds and bookings, job records. The agent's job-booking tools and the dashboard's Schedule pages use it. See [scheduler/README.md](scheduler/README.md). |
 | `infra/` | Docker Compose for one server: LiveKit, LiveKit SIP, Postgres, Redis, Caddy. |
-| `docs/` | [Deploy on a VPS](docs/deploy-vps.md), [connect Telnyx and Twilio (inbound and outbound)](docs/telephony.md), [Google and Microsoft sign-in and calendars](docs/integrations.md), [webhooks and recordings](docs/webhooks.md), [white label](docs/white-label.md). The REST API reference is built in at `/docs`. |
+| `docs/` | [Deploy on a VPS](docs/deploy-vps.md), [connect Telnyx and Twilio (inbound and outbound)](docs/telephony.md), [Google and Microsoft sign-in and calendars](docs/integrations.md), [webhooks and recordings](docs/webhooks.md), [white label](docs/white-label.md), [credits and Stripe](docs/billing.md), [web on Vercel, voice on the VPS](docs/deploy-vercel.md), [multi-brand plan](docs/multi-brand.md). The REST API reference is built in at `/docs`. |
 
 ## How a call works
 
@@ -115,6 +115,13 @@ self-hosted server it reports "not authorized" and passes audio through unchange
 - **REST API** with expiring API keys (stored hashed, shown once), documented at `/docs` with an
   OpenAPI file at `/api/v1/openapi.json`.
 
+## Credits and payments
+
+Workspaces pay through Stripe-hosted Checkout and the Customer Portal, never in the app: monthly plans
+with included credits, one-off credit packs and auto top-up. Calls and chat replies spend credits and
+agents stop at zero; agency sub-accounts share their agency's balance. Existing workspaces stay on
+manual invoicing. See [docs/billing.md](docs/billing.md).
+
 ## Admin panel
 
 Users listed in `PLATFORM_ADMIN_EMAILS` (or promoted on the Users page) get `/admin`:
@@ -125,7 +132,6 @@ else gets a 404 there.
 
 ## Not built yet
 
-- Taking payments (Stripe). Billing amounts and a CSV export exist; invoicing is manual.
 - Buying numbers from the dashboard through the Telnyx/Twilio APIs. Today numbers are bought
   in the carrier portal and added by hand, and any tenant can claim any unregistered number.
 - SMS confirmations
