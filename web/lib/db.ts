@@ -12,7 +12,9 @@ declare global {
 const serverless = Boolean(process.env.VERCEL);
 const options = {
   max: Number(process.env.DATABASE_POOL_MAX) || (serverless ? 3 : 10),
-  idle_timeout: serverless ? 20 : undefined,
+  // The session pooler admits a fixed number of clients (15 on small Supabase plans), so hand idle
+  // connections back quickly: within seconds on serverless, where many instances share that limit.
+  idle_timeout: serverless ? 5 : 60,
   // Fail fast instead of waiting on an unreachable database.
   connect_timeout: 10,
   prepare: process.env.DATABASE_PREPARE !== "false",

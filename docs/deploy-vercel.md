@@ -19,7 +19,9 @@ Browser ──► Vercel (web: dashboard, API, Stripe webhook, cron) ──► M
 Create a Postgres 16 database on Neon or Supabase. Use its **pooled** connection string for
 `DATABASE_URL` on Vercel. On Supabase that is the **session** pooler (port 5432) with
 `DATABASE_PREPARE=true`; queries through the transaction pooler (port 6543) can hang until the
-function times out.
+function times out. The session pooler admits only its pool size in clients (15 by default), so
+raise it under Database → Settings → Connection pooling, and point long-running servers (the VPS
+web app and scheduler) at the direct connection (`db.<project>.supabase.co:5432`) instead.
 
 Moving the existing data: `pg_dump` the VPS database (`docker compose exec postgres pg_dump -U voice voice`)
 and restore it into the new one. Then point the VPS scheduler's `DATABASE_URL` at the new database too,
