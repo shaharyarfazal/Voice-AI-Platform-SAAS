@@ -78,4 +78,4 @@ only the deployment whose `BRAND_ID` matches uses them:
 - Admin > Templates edits the templates of the deployment's own brand (stored per brand).
 
 HVAC is the first: `web/brands/hvac` and `web/app/(app)/hvac`. Its marketing website is a separate
-repo (`voice-hvac`) and deploys as its own Vercel project.
+repo ([Hvac-Vai-Website](https://github.com/shaharyarfazal/Hvac-Vai-Website)) and deploys as its own Vercel project.
