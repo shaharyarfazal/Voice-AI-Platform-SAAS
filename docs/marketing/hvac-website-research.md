@@ -1,150 +1,151 @@
-# HVAC Voice AI Agent — मार्केट रिसर्च, प्राइसिंग और वेबसाइट साइटमैप
+# HVAC Voice AI Agent: Market Research, Pricing and Website Sitemap
 
-> रिसर्च की तारीख: 26 अक्टूबर 2026 · टारगेट मार्केट: अमेरिका (US) के HVAC contractors
-> नोट: competitors के ज़्यादातर आँकड़े उनकी अपनी मार्केटिंग या affiliate review blogs से हैं।
-> इन्हें दिशा समझने के लिए इस्तेमाल करें, guaranteed fact की तरह नहीं। Sources आख़िर में हैं।
+> Researched: October 2026 · Target market: HVAC contractors in the United States
+> Note: most competitor figures come from their own marketing or from affiliate review blogs.
+> Use them to see the direction of the market, not as guaranteed facts. Sources are at the end.
 
 ---
 
-## 1. मार्केट एक नज़र में
+## 1. The market at a glance
 
-| बात | आँकड़ा | Source का भरोसा |
+| Point | Figure | Source reliability |
 |---|---|---|
-| US HVAC contractor industry का साइज़ | ~$159.4B (2026) | IBISWorld, मज़बूत |
-| US में HVAC contractor businesses | ~120,000 | IBISWorld, मज़बूत |
-| Home services में कितनी calls miss होती हैं | 14–27% (peak season में 25–40% तक बताया जाता है) | CallRail data (vendor ने quote किया), मध्यम |
-| जिनकी call miss हुई, उनमें से कितने वापस call नहीं करते | ~78–85% | CallRail survey / vendors, मध्यम |
-| एक missed call की क़ीमत | $200–$950 (repair); replacement job $3,000–$15,000 | Vendor estimates, कमज़ोर |
-| गर्मी में after-hours calls | June में weekday after-hours calls 9.3% (October में 6.8%), सबसे ज़्यादा 5–9 PM | ServiceTitan का 2025 data, मज़बूत |
-| Heat wave में call volume | normal से 20%+ ऊपर (vendors 3–4x तक बताते हैं) | KCTV news 2026 / vendors |
+| US HVAC contractor industry size | ~$159.4B (2026) | IBISWorld, strong |
+| HVAC contractor businesses in the US | ~120,000 | IBISWorld, strong |
+| Share of home-services calls that go unanswered | 14–27% (vendors cite 25–40% in peak season) | CallRail data quoted by vendors, medium |
+| Callers who don't call back after a missed call | ~78–85% | CallRail survey / vendors, medium |
+| Value of one missed call | $200–$950 for a repair; $3,000–$15,000 for a replacement job | Vendor estimates, weak |
+| After-hours calls in summer | Weekday after-hours calls reach 9.3% of inbound in June (6.8% in October); busiest 5–9 PM | ServiceTitan 2025 data, strong |
+| Call volume in a heat wave | 20%+ above normal (vendors claim 3–4x) | KCTV news 2026 / vendors |
 
-**हमारी sales story यही है:** HVAC वाले की टीम roof पर या basement में काम कर रही होती है, phone बजता
-रहता है, और जो call miss हुई वो customer अगली कंपनी को call कर लेता है। गर्मी की heat wave और सर्दी
-में "no heat" की emergency के वक़्त ही सबसे ज़्यादा calls miss होती हैं। हमारा AI हर call उठाता है,
-emergency पहचानता है, job book करता है और owner को summary भेजता है।
+**Our sales story:** the HVAC team is on a roof or in a basement, the phone keeps ringing, and every
+missed call goes to the next company on Google. Calls are missed most in exactly the moments that
+matter: summer heat waves and winter "no heat" emergencies. Our AI answers every call, recognises
+emergencies, books the job and sends the owner a summary.
 
 ---
 
-## 2. Competitors — कौन क्या बेच रहा है और किस भाव
+## 2. Competitors: what they sell and at what price
 
-### 2a. HVAC/home-services वाले specialist (महँगे, बड़े contractors के लिए)
+### 2a. HVAC / home-services specialists (expensive, aimed at larger contractors)
 
-| Competitor | Price | Positioning | क्या ख़ास है | कमज़ोरी (हमारा मौका) |
+| Competitor | Price | Positioning | Strengths | Weakness (our opening) |
 |---|---|---|---|---|
-| **Avoca AI** | Price public नहीं; अंदाज़न $1,000–$3,500/माह | बड़े ServiceTitan वाले operators (20+ CSRs, $10M+ revenue) | ServiceTitan certified app, CSR call coaching (हर call को 0–100 score), estimate follow-up, Brody Pennell case study: booking rate 70% → 90% | Free trial नहीं, onboarding 4–12 हफ़्ते, $3M से छोटे shop के लिए "over-engineered" |
-| **Sameday AI** | $449/माह (500 min, 3 locations), $789/माह (1,000 min) | Mid-size home services | ServiceTitan, Housecall Pro, Jobber, FieldRoutes, Service Fusion में booking; SMS; win-back campaigns; "92% booking rate" का दावा | छोटे/solo contractor के लिए entry price बहुत ऊँचा |
-| **ServiceTitan Virtual Agents** | Usage-based add-on, price public नहीं | सिर्फ़ ServiceTitan customers | Native, अलग integration की ज़रूरत नहीं | सिर्फ़ ServiceTitan के अंदर, छोटे contractors ServiceTitan इस्तेमाल ही नहीं करते |
-| **Probook, Netic, Hatch** | "Contact for pricing" | Booking rate optimisation | — | Price छुपाते हैं, यानी demo-heavy और महँगे |
+| **Avoca AI** | Not published; estimated $1,000–$3,500/mo | Large ServiceTitan operators (20+ CSRs, $10M+ revenue) | Certified ServiceTitan app, CSR call coaching (every call scored 0–100), estimate follow-up; Brody Pennell case study: booking rate 70% → 90% | No free trial, 4–12 week onboarding, "over-engineered" for shops under ~$3M |
+| **Sameday AI** | $449/mo (500 min, 3 locations), $789/mo (1,000 min) | Mid-size home services | Books into ServiceTitan, Housecall Pro, Jobber, FieldRoutes, Service Fusion; SMS; win-back campaigns; claims a 92% booking rate | Entry price too high for small or solo contractors |
+| **ServiceTitan Virtual Agents** | Usage-based add-on, price not published | ServiceTitan customers only | Native, no separate integration | Only inside ServiceTitan; most small contractors don't use ServiceTitan |
+| **Probook, Netic, Hatch** | "Contact for pricing" | Booking-rate optimisation | — | Hidden pricing means demo-heavy, expensive sales |
 
-### 2b. सस्ते, सबके लिए वाले AI receptionists (horizontal)
+### 2b. Cheap general-purpose AI receptionists
 
 | Competitor | Price | Model |
 |---|---|---|
-| **Dialzara** | $29 (60 min) · $99 (220) · $199 (500) · $349 (1,000) | Per minute, extra $0.48/min |
-| **Rosie** | $49 (250 min) · $149 (1,000) · $299 (2,000) | Calendar booking सिर्फ़ $149 वाले plan से; English + Spanish |
-| **Goodcall** | $79 (100 unique callers) · $129 · $299 | Per unique caller, per-minute charge नहीं |
-| **NextPhone** | $199/माह से flat, free trial | Housecall Pro, Jobber, ServiceTitan integrations listed |
-| **My AI Front Desk** | Free trial, credit card नहीं चाहिए | Self-serve |
-| **Smith.ai** | AI: $97.50/50 calls के आसपास, extra ~$3–4.25/call; live human: ~$292+/माह | AI + इंसानी backup (hybrid) |
+| **Dialzara** | $29 (60 min) · $99 (220) · $199 (500) · $349 (1,000) | Per minute, $0.48/min overage |
+| **Rosie** | $49 (250 min) · $149 (1,000) · $299 (2,000) | Calendar booking only from the $149 plan; English + Spanish |
+| **Goodcall** | $79 (100 unique callers) · $129 · $299 | Per unique caller, no per-minute charge |
+| **NextPhone** | From $199/mo flat, free trial | Lists Housecall Pro, Jobber and ServiceTitan integrations |
+| **My AI Front Desk** | Free trial, no credit card | Self-serve |
+| **Smith.ai** | AI: around $97.50 for 50 calls, ~$3–4.25 per extra call; live human: ~$292+/mo | AI plus human backup (hybrid) |
 
-### 2c. पुराने इंसानी answering services (हमारा असली replacement target)
+### 2c. Traditional human answering services (our real replacement target)
 
-- HVAC के लिए human answering service: **$150–$450/माह**, या $0.85–$1.60 प्रति मिनट
-- 24/7 emergency dispatch packages: **$200–$800+/माह**
-- AnswerForce: $279/माह में 200 मिनट
+- Human answering service for HVAC: **$150–$450/mo**, or $0.85–$1.60 per minute
+- 24/7 emergency dispatch packages: **$200–$800+/mo**
+- AnswerForce: $279/mo for 200 minutes
 
-### 2d. मार्केट में क्या बिक रहा है (pattern)
+### 2d. What is selling (patterns)
 
-1. **"24/7 हर call उठाओ + job book करो"** हर किसी की headline है। ये ज़रूरी है, लेकिन इससे हम अलग नहीं दिखेंगे।
-2. **Emergency triage** HVAC की सबसे बड़ी ज़रूरत है: gas smell, CO alarm, no heat, no AC में फ़र्क़ करना। Emergency हो तो on-call tech को transfer या text, और routine काम हो तो अगले दिन का slot।
-3. **FSM integration** (ServiceTitan, Jobber, Housecall Pro) mid-market में deal-breaker है। छोटे contractors के लिए Google Calendar काफ़ी है।
-4. **SMS text-back** (missed या abandoned call पर तुरंत text) लगभग हर HVAC vendor दे रहा है।
-5. **Outbound**: maintenance/tune-up reminders, बिना बिके estimates का follow-up, पुराने customers को win-back। बड़े players इसी से upsell करते हैं।
-6. **Spanish** support अमेरिका में बड़ा plus है (Rosie हर plan में दे रहा है)।
-7. **Trust के सबूत**: "हमारे AI को अभी call करें" वाला live demo number, booking rate के आँकड़े, case studies, ROI calculator।
-8. **Price का gap**: सस्ते tools ($29–$199) generic हैं और HVAC नहीं समझते, जबकि HVAC specialist $449 से $3,500 तक के हैं। **$150–$400 का HVAC-specialist slot लगभग ख़ाली है।** यहीं हमें बैठना है।
+1. **"Answer every call 24/7 and book the job"** is everyone's headline. It is required, but it won't set us apart.
+2. **Emergency triage** is HVAC's biggest need: telling a gas smell or CO alarm apart from no heat or no AC. Emergencies go to the on-call tech by transfer or text; routine work gets the next available slot.
+3. **FSM integration** (ServiceTitan, Jobber, Housecall Pro) is a deal-breaker in the mid-market. For small contractors, Google Calendar is enough.
+4. **SMS text-back** (an instant text after a missed or abandoned call) is offered by almost every HVAC vendor.
+5. **Outbound:** maintenance/tune-up reminders, follow-up on unsold estimates, win-back of past customers. Larger players upsell with this.
+6. **Spanish** support is a big plus in the US (Rosie includes it on every plan).
+7. **Proof of trust:** a "call our AI right now" live demo number, booking-rate figures, case studies, an ROI calculator.
+8. **The price gap:** cheap tools ($29–$199) are generic and don't understand HVAC, while HVAC specialists cost $449–$3,500. **The $150–$400 HVAC-specialist slot is almost empty.** That is where we should sit.
 
 ---
 
-## 3. हमारा platform आज क्या कर सकता है (honest mapping)
+## 3. What our platform can do today (honest mapping)
 
-वेबसाइट पर वही लिखना है जो product सच में करता है। ये mapping `README.md` से ली गई है:
+The website must only claim what the product really does. This mapping is taken from `README.md`:
 
-| HVAC की ज़रूरत | Platform में आज | वेबसाइट पर कैसे लिखें |
+| HVAC need | Platform today | How to word it on the website |
 |---|---|---|
-| 24/7 call answering | ✅ Telnyx/Twilio + LiveKit | पूरा claim करें |
-| Emergency triage + on-call tech को transfer | ✅ Prompt + "transfer to a person" tool. Platform rule में emergency → 911 पहले से है | Claim करें। Gas/CO के लिए script: "घर से बाहर निकलें, 911/gas company को call करें", फिर तुरंत transfer |
+| 24/7 call answering | ✅ Telnyx/Twilio + LiveKit | Claim fully |
+| Emergency triage + transfer to on-call tech | ✅ Prompt + "transfer to a person" tool; the platform-wide emergency → 911 rule already exists | Claim it. Gas/CO script: "leave the house, call 911 or the gas company", then transfer immediately |
 | Appointment booking | ✅ Google/Outlook calendar | "Books into your Google or Outlook calendar" |
-| ServiceTitan / Jobber / Housecall Pro | ⚠️ Native नहीं। Custom HTTP functions, MCP और webhooks से बन सकता है | "Connects to your FSM via custom integration (Pro/Growth plan, we set it up)". "Native ServiceTitan app" मत लिखें |
-| Call recording, transcript, AI summary | ✅ MP3, transcript, post-call analysis, custom fields | Claim करें |
-| Webhooks (Zapier/Make/CRM में भेजना) | ✅ Signed webhooks | Claim करें |
-| Website chat + click-to-call widget | ✅ एक `<script>` tag | Claim करें। ये differentiator है |
-| Spanish / multilingual | ✅ 27 भाषाएँ + auto-detect | "English & Spanish" को headline feature बनाएँ |
-| Outbound calls (reminders, estimate follow-up) | ⚠️ एक-एक call, dashboard या API से; bulk campaigns अभी नहीं | "Outbound follow-up calls" लिखें, "mass campaigns" नहीं |
-| SMS text-back / confirmations | ❌ अभी नहीं बना | "Coming soon" लिखें, या launch से पहले बनाएँ (**सबसे ज़रूरी gap**) |
-| Online payment / self-serve signup billing | ❌ Stripe नहीं है | MVP में "Book a demo" / "Start pilot" flow रखें, invoice manually |
-| White label / agency | ✅ Sub-accounts + custom domain | HVAC और Limo, दोनों niche sites इसी से अपना-अपना branded dashboard दे सकती हैं |
+| ServiceTitan / Jobber / Housecall Pro | ⚠️ Not native. Can be built with custom HTTP functions, MCP and webhooks | "Connects to your FSM through a custom integration we set up (Pro/Growth)". Do not say "native ServiceTitan app" |
+| Call recording, transcript, AI summary | ✅ MP3, transcript, post-call analysis, custom fields | Claim it |
+| Webhooks (to Zapier/Make/CRM) | ✅ Signed webhooks | Claim it |
+| Website chat + click-to-call widget | ✅ One `<script>` tag | Claim it; it's a differentiator |
+| Spanish / multilingual | ✅ 27 languages + auto-detect | Make "English & Spanish" a headline feature |
+| Outbound calls (reminders, estimate follow-up) | ⚠️ One call at a time from the dashboard or API; no bulk campaigns yet | Say "outbound follow-up calls", not "mass campaigns" |
+| SMS text-back / confirmations | ❌ Not built | Say "coming soon", or build it before launch (**the most important gap**) |
+| Online payment / self-serve billing | ❌ No Stripe | Use a "Book a demo" / "Start a pilot" flow for the MVP and invoice manually |
+| White label / agency | ✅ Sub-accounts + custom domain | The HVAC and Limo niche sites can each give clients their own branded dashboard with this |
 
-**Launch से पहले बनाने की सलाह (priority के क्रम में):**
-1. **Missed-call SMS text-back + booking confirmation SMS** (Telnyx/Twilio messaging)। हर competitor के पास है।
-2. **HVAC agent template** (Admin → Templates में): emergency keywords, on-call transfer, service area check, tune-up booking, Spanish greeting।
-3. **Website के लिए demo phone number** जिस पर HVAC demo agent चले, और homepage पर browser "Talk to our AI" button (हमारे पास पहले से browser test call और widget मौजूद है)।
-4. Jobber/Housecall Pro का एक ready custom-function recipe। ServiceTitan बाद में।
+**Recommended to build before launch (in priority order):**
+1. **Missed-call SMS text-back + booking confirmation SMS** (Telnyx/Twilio messaging). Every competitor has it.
+2. **HVAC agent template** (Admin → Templates): emergency keywords, on-call transfer, service-area check, tune-up booking, Spanish greeting.
+3. **A demo phone number for the website** running an HVAC demo agent, plus a "Talk to our AI" browser button on the homepage (we already have browser test calls and the widget).
+4. A ready custom-function recipe for Jobber / Housecall Pro. ServiceTitan later.
 
 ---
 
-## 4. Pricing की सलाह (MVP)
+## 4. Pricing recommendation (MVP)
 
-Positioning: **"Avoca/Sameday जैसा HVAC-specialist AI, आधी से कम क़ीमत पर, एक हफ़्ते में live, कोई contract नहीं।"**
+Positioning: **"A specialist HVAC AI like Avoca or Sameday, for less than half the price, live in a week, no contract."**
 
-| Plan | Price/माह | Minutes | किसके लिए | क्या मिलेगा |
+| Plan | Price/mo | Minutes | For | Includes |
 |---|---|---|---|---|
-| **Starter** | $149 | 300 | 1–3 trucks, owner-operator | 24/7 answering, emergency triage + transfer, calendar booking, call summaries by email/webhook, English + Spanish |
-| **Pro** ⭐ (सबसे ज़्यादा बेचें) | $297 | 800 | 4–15 trucks | Starter + website chat/call widget, outbound follow-up calls (tune-up reminders, estimate follow-up), custom fields, priority support, SMS text-back (जब बन जाए) |
-| **Growth** | $497 | 1,800 | Multi-location, 15+ trucks | Pro + FSM integration (Jobber/HCP/ServiceTitan via custom function, setup हम करेंगे), multiple numbers/locations, monthly call review |
+| **Starter** | $149 | 300 | 1–3 trucks, owner-operators | 24/7 answering, emergency triage + transfer, calendar booking, call summaries by email/webhook, English + Spanish |
+| **Pro** ⭐ (lead with this) | $297 | 800 | 4–15 trucks | Starter + website chat/call widget, outbound follow-up calls (tune-up reminders, estimate follow-up), custom fields, priority support, SMS text-back (once built) |
+| **Growth** | $497 | 1,800 | Multi-location, 15+ trucks | Pro + FSM integration (Jobber/HCP/ServiceTitan via custom function, set up by us), multiple numbers/locations, monthly call review |
 
-- **Extra minutes:** $0.20–$0.25/min. Competitors overage से ग्राहक को डराते हैं, तो हम साफ़ लिखें: "No surprise bills, we alert you at 80%."
-- **Setup:** Founding customers के लिए free "done-for-you setup", बाद में $299 one-time।
-- **Launch offer (MVP को boost करने के लिए):** पहले 20 HVAC clients के लिए "Founding Contractor" offer: **14 दिन का free pilot, फिर ज़िंदगी भर 30% off**, बदले में testimonial/case study। Case studies हमारी सबसे बड़ी कमी है (कोई social proof नहीं) और यही offer उसे भरेगा।
-- **Margin check (अंदाज़ा, verify करना है):** Deepgram + LLM + Cartesia + Telnyx मिलाकर लगभग $0.06–$0.12/min बैठता है। 800 min पर ~$50–$100 cost, $297 पर अच्छा margin। Admin → Settings के provider rates और call cost से असली आँकड़ा निकाल लें।
-- **Annual:** 2 महीने free (≈17% off)।
+- **Extra minutes:** $0.20–$0.25/min. Competitors scare buyers with overage, so say it plainly: "No surprise bills, we alert you at 80%."
+- **Setup:** free "done-for-you setup" for founding customers, then $299 one-time.
+- **Launch offer (to boost the MVP):** a "Founding Contractor" offer for the first 20 HVAC clients: **14-day free pilot, then 30% off for life**, in exchange for a testimonial or case study. Our biggest weakness is having no social proof, and this offer fixes that.
+- **Margin check (estimate, needs verifying):** Deepgram + LLM + Cartesia + Telnyx comes to roughly $0.06–$0.12/min. At 800 min that's ~$50–$100 of cost on a $297 plan, a healthy margin. Get the real number from the provider rates in Admin → Settings and the per-call cost.
+- **Annual:** 2 months free (≈17% off).
 
-Price को human answering service ($200–$800) से compare करके दिखाएँ, AI tools से नहीं।
+Compare our price against human answering services ($200–$800), not against AI tools.
 
 ---
 
-## 5. वेबसाइट का साइटमैप (HVAC)
+## 5. Website sitemap (HVAC)
 
-**Domain की सलाह:** HVAC के लिए अलग niche brand/domain (जैसे `[brand]hvac.ai` या `[brand].ai/hvac`)। Contractor को
-"HVAC के लिए बना" brand ज़्यादा भरोसेमंद लगता है, और Limo की messaging बिलकुल अलग होगी। दोनों sites
-एक ही platform पर चलेंगी (white-label custom domain feature से)। अगर SEO authority एक जगह रखनी है तो
-एक main domain पर `/hvac` और `/limo` folders रखें। ये फ़ैसला आपका है।
+**Domain recommendation:** a separate niche brand/domain for HVAC (e.g. `[brand]hvac.ai` or `[brand].ai/hvac`).
+A brand "built for HVAC" earns more trust from contractors, and the Limo messaging will be completely
+different. Both sites run on the same platform (through the white-label custom-domain feature). If
+you'd rather keep SEO authority in one place, use one main domain with `/hvac` and `/limo` folders.
+This is your decision.
 
 ### Phase 1: Launch (9 main pages + legal)
 
 ```
 /                         Home
-├── /how-it-works         कैसे काम करता है (3 steps + setup timeline)
-├── /features             सारे features (एक page पर sections, नीचे list)
-├── /demo                 Live demo: "Call our AI now" number + browser में बात करें + sample recordings
+├── /how-it-works         How it works (3 steps + setup timeline)
+├── /features             All features (one page, sections listed below)
+├── /demo                 Live demo: "Call our AI now" number + talk in the browser + sample recordings
 ├── /pricing              3 plans + ROI / missed-call calculator + pricing FAQ
 ├── /integrations         Google/Outlook Calendar, Jobber, Housecall Pro, ServiceTitan (custom), Zapier/webhooks
-├── /about                हम कौन हैं, क्यों HVAC
-├── /faq                  Objections का जवाब (robot लगेगा? emergency? Spanish? contract?)
+├── /about                Who we are, why HVAC
+├── /faq                  Answers to objections (will it sound robotic? emergencies? Spanish? contract?)
 ├── /contact  (/book-demo) Demo booking form + calendar embed
-├── /signup → app         Pilot शुरू करें (मौजूदा app का /signup या onboarding)
+├── /signup → app         Start a pilot (the existing app's /signup or onboarding)
 └── Legal
     ├── /privacy
     ├── /terms
-    └── /call-recording-and-ai-disclosure  (US call recording consent states, AI disclosure)
+    └── /call-recording-and-ai-disclosure  (US call-recording consent states, AI disclosure)
 ```
 
-### Phase 2: Launch के 1–3 महीने बाद (SEO + trust)
+### Phase 2: 1–3 months after launch (SEO + trust)
 
 ```
-├── /case-studies                 Founding customers की stories (booking rate, revenue recovered)
+├── /case-studies                 Founding customers' stories (booking rate, revenue recovered)
 │   └── /case-studies/[company]
-├── /use-cases                    या /solutions
+├── /use-cases                    (or /solutions)
 │   ├── /after-hours-answering
 │   ├── /emergency-dispatch
 │   ├── /overflow-peak-season     (heat wave / cold snap)
@@ -153,20 +154,18 @@ Price को human answering service ($200–$800) से compare करके �
 │   └── /compare/[competitor]
 ├── /tools/missed-call-calculator  Free tool (SEO + lead magnet)
 ├── /blog                         "HVAC answering service cost", "how to handle summer call surges"...
-├── /partners                     Agencies के लिए white-label/reseller program
-└── /es                           Spanish landing page (Spanish बोलने वाले contractors)
+├── /partners                     White-label / reseller program for agencies
+└── /es                           Spanish landing page (for Spanish-speaking contractors)
 ```
 
 ### Navigation
 
 - **Header:** Features · How it works · Pricing · Demo · Integrations · **[Hear it live: (xxx) xxx-xxxx]** · **[Book a demo]** (button)
-- **Footer:** सारे pages + legal + phone + email + "Built for HVAC. Also for: Limousine (link)"
+- **Footer:** all pages + legal + phone + email + "Built for HVAC. Also for: Limousine (link)"
 
 ---
 
-## 6. Page-by-page content (क्या लिखना है)
-
-वेबसाइट की copy English में होगी (US market)। नीचे हर section का draft दिया है।
+## 6. Page-by-page content
 
 ### 6.1 Home `/`
 
@@ -175,82 +174,82 @@ Price को human answering service ($200–$800) से compare करके �
    - Sub: "Built for heating & cooling contractors. Live in 7 days. No contracts."
    - CTAs: `[Hear it live: call (xxx) xxx-xxxx]` `[Talk to it in your browser]` `[Book a demo]`
    - Trust line: "English & Spanish · Works with Google Calendar, Jobber, Housecall Pro"
-2. **Problem (आँकड़ों के साथ):** "1 in 4 calls goes unanswered in peak season. 8 in 10 of those callers never call back. They call your competitor." (Sources के साथ footnote दें।)
-3. **3 बड़े outcomes:** 24/7 answering · Emergency triage & on-call transfer · Jobs booked straight into your calendar
-4. **Live demo block:** audio player पर 3 sample calls: (a) AC बंद है, 9 PM, booking; (b) gas की बदबू → safety script + on-call transfer; (c) Spanish में tune-up booking
+2. **Problem (with numbers):** "1 in 4 calls goes unanswered in peak season. 8 in 10 of those callers never call back. They call your competitor." (Footnote the sources.)
+3. **3 big outcomes:** 24/7 answering · Emergency triage & on-call transfer · Jobs booked straight into your calendar
+4. **Live demo block:** audio player with 3 sample calls: (a) AC is out at 9 PM, job booked; (b) gas smell → safety script + on-call transfer; (c) tune-up booked in Spanish
 5. **How it works (3 steps):** Forward your number → We train it on your services, area & prices → It answers, books and sends you the summary
-6. **Feature grid** (`/features` पर link)
-7. **ROI calculator का छोटा version:** calls/day × miss rate × avg ticket = "You're losing ~$X/month"
+6. **Feature grid** (links to `/features`)
+7. **Mini ROI calculator:** calls/day × miss rate × average ticket = "You're losing ~$X/month"
 8. **Pricing teaser:** "Plans from $149/mo, less than a part-time CSR" → `/pricing`
-9. **Comparison table:** Voicemail vs Human answering service vs Our AI (price, 24/7, booking, Spanish, consistency)
+9. **Comparison table:** Voicemail vs human answering service vs our AI (price, 24/7, booking, Spanish, consistency)
 10. **Founding Contractor offer banner:** "14-day free pilot + 30% off for life, first 20 contractors"
-11. **FAQ** (5–6 सवाल) + final CTA
+11. **FAQ** (5–6 questions) + final CTA
 
 ### 6.2 How it works `/how-it-works`
-Day 1: kickoff call (services, service area, pricing rules, emergency rules, on-call number) → Day 2–5: हम agent बनाते और test करते हैं (आपके website से knowledge base) → Day 6: आप test calls करते हैं → Day 7: call forwarding चालू (सिर्फ़ after-hours / overflow / पूरा 24/7, आपकी मर्ज़ी)। Diagram: caller → AI → emergency? → on-call tech / booking → calendar + summary।
+Day 1: kickoff call (services, service area, pricing rules, emergency rules, on-call number) → Days 2–5: we build and test the agent (knowledge base from your website) → Day 6: you make test calls → Day 7: call forwarding goes live (after-hours only, overflow, or full 24/7, your choice). Diagram: caller → AI → emergency? → on-call tech / booking → calendar + summary.
 
 ### 6.3 Features `/features`
-हर feature का एक section, HVAC की भाषा में:
-- **24/7 answering**: nights, weekends, holidays, heat waves
-- **Emergency triage**: gas smell / CO alarm / no heat / no AC / water leak, आपके rules के हिसाब से; on-call tech को live transfer
-- **Job booking**: Google/Outlook calendar में, service area और job type check करके
-- **Overflow mode**: आपकी टीम busy हो तभी AI उठाए
-- **Call summaries & recordings**: हर call का transcript, AI summary, customer details, urgency
-- **Outbound follow-ups**: tune-up reminders, estimate follow-up, missed-call callback
-- **Website chat & click-to-call widget**: एक line का code
-- **English & Spanish** (और 25 भाषाएँ)
-- **Your data, your way**: webhooks → CRM/Zapier/Google Sheets
-- **Guardrails**: price या commitments पर सिर्फ़ आपके दिए rules, बात न बने तो इंसान को transfer
-- **SMS text-back**: "Coming soon" (या launch से पहले बना लें)
+One section per feature, in HVAC language:
+- **24/7 answering:** nights, weekends, holidays, heat waves
+- **Emergency triage:** gas smell / CO alarm / no heat / no AC / water leak, following your rules; live transfer to the on-call tech
+- **Job booking:** into Google/Outlook calendar, after checking service area and job type
+- **Overflow mode:** the AI only answers when your team is busy
+- **Call summaries & recordings:** transcript, AI summary, customer details and urgency for every call
+- **Outbound follow-ups:** tune-up reminders, estimate follow-up, missed-call callback
+- **Website chat & click-to-call widget:** one line of code
+- **English & Spanish** (plus 25 more languages)
+- **Your data, your way:** webhooks → CRM / Zapier / Google Sheets
+- **Guardrails:** prices and commitments only from the rules you give it; hands off to a person when it can't help
+- **SMS text-back:** "coming soon" (or build it before launch)
 
 ### 6.4 Demo `/demo`
-बड़ा phone number + "Talk in browser" button (मौजूदा widget से) + 3 sample recordings + "Try saying: 'My AC stopped working and it's 95 degrees'"। नीचे Book-a-demo form। **ये site का सबसे ज़्यादा convert करने वाला page होगा।** Competitors में ElevenLabs और My AI Front Desk यही करते हैं।
+Large phone number + "Talk in your browser" button (using the existing widget) + 3 sample recordings + "Try saying: 'My AC stopped working and it's 95 degrees'". Book-a-demo form below. **This will be the highest-converting page on the site.** ElevenLabs and My AI Front Desk do the same.
 
 ### 6.5 Pricing `/pricing`
-3 plan cards (section 4 वाले) + annual toggle + "What counts as a minute" + overage policy + full **Missed-call ROI calculator** (inputs: calls/day, % missed, avg ticket, close rate) + comparison: "vs human answering service $200–$800/mo" + pricing FAQ + Founding offer।
+3 plan cards (from section 4) + annual toggle + "What counts as a minute" + overage policy + full **missed-call ROI calculator** (inputs: calls/day, % missed, average ticket, close rate) + comparison: "vs human answering service at $200–$800/mo" + pricing FAQ + founding offer.
 
 ### 6.6 Integrations `/integrations`
-Logos grid, हर logo पर ईमानदार label: "Native" (Google Calendar, Outlook, Telnyx, Twilio, webhooks) / "Custom setup by our team" (Jobber, Housecall Pro, ServiceTitan, FieldEdge) / "Coming soon"। "Your FSM isn't listed? We connect via API." CTA।
+Logo grid with an honest label on each: "Native" (Google Calendar, Outlook, Telnyx, Twilio, webhooks) / "Custom setup by our team" (Jobber, Housecall Pro, ServiceTitan, FieldEdge) / "Coming soon". CTA: "Your FSM isn't listed? We connect via API."
 
 ### 6.7 About `/about`
-Story: "हमने देखा कि contractors roof पर होते हैं और phone बजता रहता है..." Team, mission, contact. छोटा रखें।
+The story: "We saw contractors up on roofs while the phone kept ringing..." Team, mission, contact. Keep it short.
 
 ### 6.8 FAQ `/faq`
-- Will callers know it's AI? (AI disclosure setting है, हम इसके बारे में honest रहें)
+- Will callers know it's AI? (There's an AI disclosure setting; be honest about it.)
 - What happens in an emergency like a gas leak?
-- Can it quote prices? (सिर्फ़ आपके दिए rules से, जैसे "diagnostic fee $89")
+- Can it quote prices? (Only from rules you give it, e.g. "diagnostic fee $89")
 - Does it speak Spanish?
-- Can I keep my phone number? (हाँ, call forwarding से)
-- Contract? (नहीं, month-to-month)
-- What if it can't answer? (आपके number पर transfer या message ले लेता है)
-- Is my call data secure? Recording consent?
+- Can I keep my phone number? (Yes, through call forwarding)
+- Is there a contract? (No, month-to-month)
+- What if it can't answer a question? (It transfers to your number or takes a message)
+- Is my call data secure? What about recording consent?
 
 ### 6.9 Contact / Book a demo `/contact`
-Short form: Name, Company, Phone, # of trucks, FSM software (dropdown), "Biggest call problem" + calendar embed। Form submit पर हमारा अपना AI agent 60 सेकंड में lead को call करे (outbound API से)। ये अपने आप में सबसे अच्छा demo है।
+Short form: name, company, phone, number of trucks, FSM software (dropdown), "biggest call problem" + calendar embed. When the form is submitted, our own AI agent calls the lead within 60 seconds (through the outbound API). That call is the best demo we can give.
 
 ---
 
-## 7. MVP को boost करने वाली चीज़ें (checklist)
+## 7. MVP launch checklist
 
-- [ ] Demo phone number + HVAC demo agent (हर page के header में)
-- [ ] Browser "Talk to AI" button (मौजूदा widget)
-- [ ] Speed-to-lead: demo form भरते ही हमारा AI call करे
+- [ ] Demo phone number + HVAC demo agent (in the header of every page)
+- [ ] Browser "Talk to AI" button (existing widget)
+- [ ] Speed-to-lead: our AI calls the lead as soon as the demo form is submitted
 - [ ] 3 sample call recordings (AC emergency, gas smell, Spanish booking)
 - [ ] ROI calculator
-- [ ] Founding Contractor offer (14-दिन pilot + 30% lifetime off, बदले में case study)
-- [ ] SMS text-back बनाना (सबसे बड़ा product gap)
+- [ ] Founding Contractor offer (14-day pilot + 30% lifetime discount in exchange for a case study)
+- [ ] Build SMS text-back (biggest product gap)
 - [ ] HVAC template: emergency keywords, on-call transfer, service-area check
-- [ ] Legal: privacy, terms, call recording/AI disclosure
-- [ ] SEO basics: हर page का title/meta, schema (`SoftwareApplication`, `FAQPage`), Google Business Profile
-- [ ] Targeted keywords (volume tool जैसे Google Keyword Planner या Semrush से verify करें): "HVAC answering service", "AI receptionist for HVAC", "HVAC after hours answering service", "HVAC call answering service", "Avoca alternative"
+- [ ] Legal: privacy, terms, call recording / AI disclosure
+- [ ] SEO basics: title/meta on every page, schema (`SoftwareApplication`, `FAQPage`), Google Business Profile
+- [ ] Target keywords (verify volumes in Google Keyword Planner or Semrush): "HVAC answering service", "AI receptionist for HVAC", "HVAC after hours answering service", "HVAC call answering service", "Avoca alternative"
 
 ---
 
-## 8. अगला कदम
+## 8. Next steps
 
-1. Pricing और domain पर फ़ैसला
-2. Phase 1 के 9 pages बनाना (Next.js में, इसी repo में `site/` folder में या अलग repo में)
-3. इसी format में Limousine का research + sitemap
+1. Decide on pricing and domain
+2. Build the 9 Phase 1 pages (Next.js, in a `site/` folder in this repo or a separate repo)
+3. Do the same research and sitemap for Limousine
 
 ---
 
