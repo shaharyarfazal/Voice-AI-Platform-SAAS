@@ -40,7 +40,9 @@ Existing recordings on the VPS disk: copy `infra`'s recordings volume into the b
 - Environment variables: everything in `web/.env.example`. `CRON_SECRET` is required for the cron jobs.
 - Preview deployments skip migrations. Give Preview its own `DATABASE_URL` (a Neon branch) and set
   `MIGRATE_PREVIEW=true` if you want previews migrated.
-- Cron jobs: `/api/cron/knowledge` every 5 minutes needs a Pro plan (Hobby allows daily crons only).
+- Cron jobs: `vercel.json` runs both daily, which the Hobby plan allows. The VPS runs them on the real
+  schedule with `infra/vercel-cron.sh` (below). On a Pro plan you can instead set them in `vercel.json`
+  to `*/5 * * * *` (knowledge) and `0 * * * *` (maintenance) and skip the VPS crontab.
 
 ## 4. VPS: voice only
 
@@ -50,6 +52,13 @@ Existing recordings on the VPS disk: copy `infra`'s recordings volume into the b
   `scheduler.example.com → 127.0.0.1:8100`. The scheduler already requires a signed token
   (`SCHED_JWT_SECRET`) and the internal token on every request.
 - Remove the `web` service from `docker compose` once Vercel serves production.
+- Crons: put `WEB_API_URL=https://app.yourbrand.com` and `CRON_SECRET=<same as Vercel>` in
+  `/etc/voice-cron.env` (`chmod 600`), then add to root's crontab:
+  ```
+  */5 * * * * /root/voice/infra/vercel-cron.sh knowledge
+  0 * * * *   /root/voice/infra/vercel-cron.sh maintenance
+  ```
+  One app deployment is enough: all brands share the database, so its queue and cleanup cover them all.
 
 ## What changes on Vercel
 
