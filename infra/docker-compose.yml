@@ -100,7 +100,9 @@ services:
     environment:
       PORT: 3000
       HOSTNAME: 127.0.0.1
-      DATABASE_URL: postgres://voice:${POSTGRES_PASSWORD}@127.0.0.1:15432/voice
+      # Shared database for every brand (docs/multi-brand.md); defaults to the Postgres below.
+      DATABASE_URL: ${WEB_DATABASE_URL:-postgres://voice:${POSTGRES_PASSWORD}@127.0.0.1:15432/voice}
+      DATABASE_PREPARE: ${WEB_DATABASE_PREPARE:-true}
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
@@ -166,7 +168,10 @@ services:
     environment: &scheduler-env
       HOST: 127.0.0.1
       PORT: 8100
-      DATABASE_URL: postgresql+asyncpg://voice:${POSTGRES_PASSWORD}@127.0.0.1:15432/voice
+      # A direct connection, not a pooler: the service switches roles at connect time for row-level
+      # security, and Supabase's pooler drops that silently.
+      DATABASE_URL: ${SCHED_DATABASE_URL:-postgresql+asyncpg://voice:${POSTGRES_PASSWORD}@127.0.0.1:15432/voice}
+      DB_POOL_SIZE: ${SCHED_DB_POOL_SIZE:-10}
       # Database 2, apart from anything else using this Redis.
       REDIS_URL: redis://default:${REDIS_PASSWORD}@127.0.0.1:16379/2
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
