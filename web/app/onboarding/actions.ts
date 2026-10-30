@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { LANGUAGES } from "@/lib/catalog";
 import { sql } from "@/lib/db";
-import { addSource } from "@/lib/knowledge/ingest";
+import { addSource, resync } from "@/lib/knowledge/ingest";
 import { assertPublicUrl } from "@/lib/net";
 import { finishOnboarding } from "@/lib/onboarding";
 
@@ -55,8 +55,17 @@ export async function saveKnowledge(_: StepState, form: FormData): Promise<StepS
   const [t] = await sql<{ website: string | null }[]>`SELECT website FROM tenants WHERE id = ${tenantId}`;
   const description = form.get("description")?.toString().trim() ?? "";
   const readSite = form.get("readWebsite") === "on" && t?.website;
-  const [already] = await sql`SELECT 1 FROM kb_sources WHERE kb_id = ${kbId} AND kind = 'website'`;
-  if (readSite && !already) await addSource(tenantId, kbId, { kind: "website", title: new URL(t.website!).hostname, url: t.website!, maxPages: 40 });
+  if (readSite) {
+    // Coming back to this step (or changing the website on the first one) shouldn't skip the read.
+    const [existing] = await sql<{ id: string; url: string | null; status: string }[]>`
+      SELECT id, url, status FROM kb_sources WHERE kb_id = ${kbId} AND kind = 'website' ORDER BY created_at DESC LIMIT 1`;
+    if (!existing) {
+      await addSource(tenantId, kbId, { kind: "website", title: new URL(t.website!).hostname, url: t.website!, maxPages: 40 });
+    } else if (existing.url !== t.website || existing.status === "error") {
+      await sql`UPDATE kb_sources SET url = ${t.website!}, title = ${new URL(t.website!).hostname} WHERE id = ${existing.id}`;
+      await resync(tenantId, existing.id);
+    }
+  }
   if (description.length >= 20) await addSource(tenantId, kbId, { kind: "text", title: "About the business", content: description });
   return { ok: true, kbId };
 }

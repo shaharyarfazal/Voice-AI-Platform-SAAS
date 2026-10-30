@@ -54,7 +54,11 @@ export async function startOutboundCall(req: OutboundRequest): Promise<OutboundR
   if (agent.tenant_status !== "active") return { error: "This workspace is suspended.", status: 403 };
   if (agent.limit !== null && agent.used >= agent.limit) return { error: "The monthly minute limit has been reached.", status: 403 };
 
-  const numbers = await sql<{ e164: string; carrier: Carrier }[]>`SELECT e164, carrier FROM phone_numbers WHERE tenant_id = ${req.tenantId} ORDER BY created_at`;
+  // Only numbers the workspace has proven it owns (bought here, or verified) can be the caller ID.
+  // Verified numbers from other providers are verified caller IDs on the platform's Twilio account, so they dial out through Twilio.
+  const numbers = await sql<{ e164: string; carrier: Carrier }[]>`
+    SELECT e164, CASE WHEN carrier = 'other' THEN 'twilio' ELSE carrier END AS carrier FROM phone_numbers
+    WHERE tenant_id = ${req.tenantId} AND status IN ('active', 'past_due') ORDER BY created_at`;
   const from = req.from ? numbers.find((n) => n.e164 === req.from) : numbers[0];
   if (!from) return { error: req.from ? "Caller ID must be one of your phone numbers." : "Add a phone number first: it's used as the caller ID.", status: 400 };
   const trunk = carrierConfig(from.carrier);

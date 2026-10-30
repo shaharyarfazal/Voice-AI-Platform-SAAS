@@ -25,7 +25,7 @@ export default async function AgentPage({ params }: PageProps<"/agents/[id]">) {
     sql<{ numbers: number; widgets: number }[]>`
       SELECT (SELECT count(*)::int FROM phone_numbers WHERE agent_id = ${id}) AS numbers,
              (SELECT count(*)::int FROM widgets WHERE agent_id = ${id}) AS widgets`,
-    sql<{ e164: string }[]>`SELECT e164 FROM phone_numbers WHERE tenant_id = ${tenantId} ORDER BY e164`,
+    sql<{ e164: string }[]>`SELECT e164 FROM phone_numbers WHERE tenant_id = ${tenantId} AND status IN ('active', 'past_due') ORDER BY e164`,
   ]);
   if (!agent) notFound();
   const initial = toEditorState(agent as never);

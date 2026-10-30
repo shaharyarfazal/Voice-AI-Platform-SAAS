@@ -13,6 +13,8 @@ import { FILE_TYPES, htmlToPage, pdfToText } from "./extract";
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_CHARS = 2_000_000;
 const MAX_CHUNKS = 4000;
+/** A website crawl stops after this long with the pages it has, leaving time to embed and save them. */
+const CRAWL_BUDGET_MS = 150_000;
 
 export async function addSource(
   tenantId: string,
@@ -51,7 +53,7 @@ async function load(source: { kind: string; title: string; url: string | null; c
     const pages = await crawlWebsite(source.url!, Math.min(200, source.options.maxPages ?? 30), (done, total) => {
       void sql`UPDATE kb_sources SET pages = ${done}, updated_at = now() WHERE id = ${id}`.catch(() => {});
       void total;
-    });
+    }, Date.now() + CRAWL_BUDGET_MS);
     if (pages.length === 0) throw new Error("No readable pages were found. Check the address, or the site may block automated reading.");
     return pages.map((p) => ({ title: p.title, url: p.url, text: p.text }));
   }
@@ -111,22 +113,30 @@ async function processSource(id: string): Promise<void> {
 
 let running = 0;
 const CONCURRENCY = 2;
-/** A source "processing" for longer than this was cut off (restart, serverless timeout) and is retried. */
-const STALE_MINUTES = 20;
+/**
+ * A source "processing" for longer than this was cut off (restart, serverless timeout) and is retried.
+ * Crawls stop after CRAWL_BUDGET_MS and progress updates refresh updated_at, so live work never gets this old.
+ */
+const STALE_MINUTES = 6;
 
-async function claimNext(): Promise<string | null> {
+async function claimNext(tenantId?: string): Promise<string | null> {
   const [next] = await sql<{ id: string }[]>`
     UPDATE kb_sources SET status = 'processing', updated_at = now()
-    WHERE id = (SELECT id FROM kb_sources WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
+    WHERE id = (
+      SELECT id FROM kb_sources WHERE status = 'queued' ${tenantId ? sql`AND tenant_id = ${tenantId}` : sql``}
+      ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
     RETURNING id`;
   return next?.id ?? null;
 }
 
-/** Processes queued sources one after another until the queue is empty or the deadline passes. */
-export async function drainQueue(deadline: number): Promise<number> {
+/**
+ * Processes queued sources one after another until the queue is empty or the deadline passes.
+ * With `tenantId`, only that workspace's sources (the setup wizard drives its own this way).
+ */
+export async function drainQueue(deadline: number, tenantId?: string): Promise<number> {
   let done = 0;
   while (Date.now() < deadline) {
-    const id = await claimNext();
+    const id = await claimNext(tenantId);
     if (!id) break;
     await processSource(id);
     done++;
@@ -135,10 +145,11 @@ export async function drainQueue(deadline: number): Promise<number> {
 }
 
 /** Puts sources that were cut off mid-processing back in the queue. */
-export async function requeueStale(): Promise<number> {
+export async function requeueStale(tenantId?: string): Promise<number> {
   const rows = await sql`
     UPDATE kb_sources SET status = 'queued'
     WHERE status = 'processing' AND updated_at < now() - make_interval(mins => ${STALE_MINUTES})
+      ${tenantId ? sql`AND tenant_id = ${tenantId}` : sql``}
     RETURNING id`;
   return rows.length;
 }

@@ -162,6 +162,17 @@ function BuildStep() {
 
   useEffect(() => {
     let stop = false;
+    // Read the website and documents in a request that stays open, a few rounds at most.
+    void (async () => {
+      for (let round = 0; round < 3 && !stop; round++) {
+        try {
+          await fetch("/api/onboarding/build", { method: "POST" });
+        } catch {
+          // polling below still shows progress; background processing and the cron job carry on
+        }
+        if (stop || (await buildStatus()).done) return;
+      }
+    })();
     const tick = async () => {
       const s = await buildStatus();
       if (stop) return;

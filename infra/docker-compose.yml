@@ -149,6 +149,11 @@ services:
       TWILIO_SIP_DOMAIN: ${TWILIO_SIP_DOMAIN:-}
       TWILIO_SIP_USERNAME: ${TWILIO_SIP_USERNAME:-}
       TWILIO_SIP_PASSWORD: ${TWILIO_SIP_PASSWORD:-}
+      # Selling numbers to workspaces and verifying clients' own numbers (the platform's Twilio account;
+      # bought numbers go onto TWILIO_TRUNK_SID). Without them the Numbers page can't buy or verify.
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_TRUNK_SID: ${TWILIO_TRUNK_SID:-}
       # White label: product name shown when no agency branding applies.
       PLATFORM_NAME: ${PLATFORM_NAME:-}
     volumes:

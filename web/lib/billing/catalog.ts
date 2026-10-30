@@ -34,6 +34,8 @@ export const CatalogSchema = z.object({
   trialCredits: z.number().nonnegative().default(0),
   /** Credits one chatbot reply costs. */
   chatReplyCredits: z.number().nonnegative().default(0.05),
+  /** Monthly price of a phone number bought through the platform, in cents, taken from credits. */
+  phoneNumberCents: z.number().int().nonnegative().default(200),
   plans: z.array(PlanSchema),
   packs: z.array(PackSchema).min(1),
 });
@@ -116,6 +118,15 @@ export function findPlan(catalog: BillingCatalog, id: string | null | undefined)
 
 export function findPack(catalog: BillingCatalog, id: string | null | undefined): CreditPack | undefined {
   return catalog.packs.find((p) => p.id === id);
+}
+
+/**
+ * Credits a bought phone number costs each month: its price at the smallest credit pack's rate,
+ * rounded up to a tenth of a credit.
+ */
+export function phoneNumberCredits(catalog: BillingCatalog): number {
+  const pack = [...catalog.packs].sort((a, b) => a.credits - b.credits)[0];
+  return Math.ceil((catalog.phoneNumberCents * pack.credits * 10) / pack.priceCents) / 10;
 }
 
 export function formatMoney(cents: number, currency: string): string {

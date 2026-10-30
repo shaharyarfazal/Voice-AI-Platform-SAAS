@@ -23,6 +23,7 @@ const KIND_LABELS: Record<LedgerRow["kind"], string> = {
   chat: "Chat",
   adjustment: "Adjustment",
   refund: "Refund",
+  phone_number: "Phone number",
 };
 
 /** When the customer comes back from Checkout, credit them now instead of waiting for the webhook. */

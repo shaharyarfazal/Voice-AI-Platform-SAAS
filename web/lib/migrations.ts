@@ -363,6 +363,30 @@ const MIGRATIONS: { id: string; sql: string }[] = [
       );
     `,
   },
+  {
+    id: "0008_number_sources_verification",
+    sql: `
+      -- source: 'platform' numbers are bought from the platform's Twilio account and billed monthly;
+      -- 'byo' numbers are the client's own, added only after the owner proves they answer them.
+      -- status: 'pending' (verification call under way, doesn't route calls), 'active', or
+      -- 'past_due' (renewal unpaid; still answers until it's released).
+      ALTER TABLE phone_numbers
+        ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'byo' CHECK (source IN ('platform', 'byo')),
+        ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active', 'past_due')),
+        ADD COLUMN IF NOT EXISTS provider_sid text,
+        ADD COLUMN IF NOT EXISTS verify_code text,
+        ADD COLUMN IF NOT EXISTS verify_expires_at timestamptz,
+        ADD COLUMN IF NOT EXISTS paid_until timestamptz,
+        ADD COLUMN IF NOT EXISTS verified_at timestamptz;
+      ALTER TABLE phone_numbers DROP CONSTRAINT IF EXISTS phone_numbers_carrier_check;
+      ALTER TABLE phone_numbers ADD CONSTRAINT phone_numbers_carrier_check CHECK (carrier IN ('telnyx', 'twilio', 'other'));
+      CREATE INDEX IF NOT EXISTS phone_numbers_renewal_idx ON phone_numbers(paid_until) WHERE source = 'platform';
+
+      ALTER TABLE credit_ledger DROP CONSTRAINT IF EXISTS credit_ledger_kind_check;
+      ALTER TABLE credit_ledger ADD CONSTRAINT credit_ledger_kind_check
+        CHECK (kind IN ('trial', 'purchase', 'auto_recharge', 'plan_renewal', 'call', 'chat', 'adjustment', 'refund', 'phone_number'));
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {

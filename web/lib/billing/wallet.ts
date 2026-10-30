@@ -4,7 +4,7 @@ import { catalogFor } from "./catalog";
 import { apply, callCostMilli, splitDebit, toMilli, total, type Balances, type Delta } from "./credits-math";
 
 export type BillingMode = "credits" | "parent" | "manual";
-export type LedgerKind = "trial" | "purchase" | "auto_recharge" | "plan_renewal" | "call" | "chat" | "adjustment" | "refund";
+export type LedgerKind = "trial" | "purchase" | "auto_recharge" | "plan_renewal" | "call" | "chat" | "adjustment" | "refund" | "phone_number";
 
 export type AutoRecharge = { enabled?: boolean; thresholdCredits?: number; packId?: string; lastError?: string };
 

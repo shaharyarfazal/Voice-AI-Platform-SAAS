@@ -13,7 +13,7 @@ type AgentWithTenant = FullAgentRow & {
 };
 
 // Called by the agent worker at the start of every call. A 404 makes the agent hang up before
-// any AI provider is used: unknown number, suspended tenant, monthly minute limit reached, or no
+// any AI provider is used: unknown or not yet verified number, suspended tenant, monthly minute limit reached, or no
 // credits left. With credits, the call's time limit is capped at what the balance pays for.
 export async function GET(request: Request) {
   if (!isInternalRequest(request)) return new Response("Unauthorized", { status: 401 });
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     rows = await sql<AgentWithTenant[]>`${select} WHERE a.id = ${agentId}`;
   } else if (number) {
     rows = await sql<AgentWithTenant[]>`
-      ${select} JOIN phone_numbers p ON p.agent_id = a.id WHERE p.e164 = ${number}`;
+      ${select} JOIN phone_numbers p ON p.agent_id = a.id WHERE p.e164 = ${number} AND p.status IN ('active', 'past_due')`;
   }
   const agent = rows[0];
   if (!agent) return new Response("Not found", { status: 404 });

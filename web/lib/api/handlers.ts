@@ -240,7 +240,7 @@ export const HANDLERS: Record<string, Handler> = {
 
   // ---- Other ----
   "list-numbers": async (ctx) => ({
-    data: await sql`SELECT e164 AS number, carrier, agent_id FROM phone_numbers WHERE tenant_id = ${ctx.caller.tenantId} ORDER BY created_at`,
+    data: await sql`SELECT e164 AS number, carrier, agent_id, source, status FROM phone_numbers WHERE tenant_id = ${ctx.caller.tenantId} ORDER BY created_at`,
   }),
   "list-widgets": async (ctx) => ({
     data: await sql`

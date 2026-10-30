@@ -23,6 +23,19 @@ dashboard's **Phone numbers** page.
 4. Copy Twilio's current SIP signalling IP ranges for your region from their documentation into
    `TWILIO_SIP_IPS` in `infra/.env`.
 
+### Selling numbers and verifying clients' own numbers
+
+With the platform's Twilio account set, workspaces can buy a number on the **Numbers** page
+($2/month, charged in credits; unpaid numbers keep working for 7 days, then go back to Twilio), and
+can connect a number they already have. Their own number is only added after Twilio phones it and
+whoever answers enters the code shown in the dashboard; until then it doesn't answer calls.
+
+Set in `infra/.env` (and in the hosting project's environment variables when the dashboard runs there):
+
+- `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`: from the Twilio console. Enough for verifying numbers.
+- `TWILIO_TRUNK_SID`: the Elastic SIP Trunk above (starts with `TK`). Bought numbers are put on it,
+  so they reach the SIP server with no further setup. Needed for selling numbers.
+
 ## Apply
 
 ```sh

@@ -66,8 +66,20 @@ async function sitemapUrls(urls: string[], limit: number): Promise<string[]> {
 
 export type CrawlProgress = (done: number, total: number) => void;
 
-export async function crawlWebsite(startUrl: string, maxPages: number, onProgress?: CrawlProgress): Promise<Page[]> {
-  const start = new URL(startUrl);
+/**
+ * Crawls up to `maxPages` pages. Stops at `deadline` (epoch ms) with what it has, so a slow site
+ * can't run past the serverless function's time limit and leave the source stuck mid-processing.
+ */
+export async function crawlWebsite(startUrl: string, maxPages: number, onProgress?: CrawlProgress, deadline = Number.POSITIVE_INFINITY): Promise<Page[]> {
+  // Follow the start page's redirects first: theirsite.com often lives at www.theirsite.co.uk or similar,
+  // and links on the final site would otherwise all count as "another site".
+  let start = new URL(startUrl);
+  try {
+    const first = await fetchPublic(startUrl, { maxBytes: 8_000_000, accept: "text/html,*/*;q=0.5" });
+    if (first) start = new URL(first.url);
+  } catch {
+    // the crawl below reports it if the site can't be read at all
+  }
   const origin = start.origin;
   const robots = await robotsDisallows(origin);
   const allowed = (u: URL) => sameSite(u, start) && !robots.rules.some((r) => u.pathname.startsWith(r)) && !SKIP_PATHS.test(u.pathname);
@@ -82,7 +94,7 @@ export async function crawlWebsite(startUrl: string, maxPages: number, onProgres
     seen.add(n);
     queue.push(n);
   };
-  add(startUrl, startUrl);
+  add(start.toString(), start.toString());
   for (const u of await sitemapUrls([...robots.sitemaps, `${origin}/sitemap.xml`], maxPages * 3)) add(u, origin);
 
   const pages: Page[] = [];
@@ -91,7 +103,7 @@ export async function crawlWebsite(startUrl: string, maxPages: number, onProgres
   let active = 0;
   const worker = async () => {
     for (;;) {
-      if (pages.length >= maxPages) return;
+      if (pages.length >= maxPages || Date.now() > deadline) return;
       if (index >= queue.length) {
         // Others may still add links; stop only when nothing is in flight.
         if (active === 0) return;

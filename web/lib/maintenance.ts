@@ -21,10 +21,14 @@ export async function purgeOldTranscripts(): Promise<number> {
 }
 
 export function startMaintenance(): void {
-  const run = () =>
+  const run = () => {
     purgeOldTranscripts()
       .then((n) => n > 0 && console.log(`purged ${n} transcripts past retention`))
       .catch((e) => console.error("transcript purge failed", e));
+    import("./phone-numbers")
+      .then((m) => m.renewNumbers())
+      .catch((e) => console.error("number renewal failed", e));
+  };
   run();
   setInterval(run, HOUR).unref();
 }
