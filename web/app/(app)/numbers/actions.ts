@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireSession } from "@/lib/auth";
+import { walletFor } from "@/lib/billing/wallet";
 import { sql } from "@/lib/db";
 import * as numbers from "@/lib/phone-numbers";
 import { rateLimit } from "@/lib/rate-limit";
@@ -22,6 +23,7 @@ const Search = z.object({
 export async function searchAvailable(_: SearchState, form: FormData): Promise<SearchState> {
   const { tenantId } = await requireRole("admin");
   if (!twilioStatus().sell) return { error: "Buying numbers isn't available yet." };
+  if (!numbers.canBuyNumbers(await walletFor(tenantId))) return { error: numbers.NEEDS_PLAN };
   const parsed = Search.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   if (!rateLimit(`num-search:${tenantId}`, 30, 60_000)) return { error: "Too many searches. Wait a minute." };

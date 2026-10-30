@@ -27,6 +27,22 @@ function chargesCredits(wallet: Wallet | null): wallet is Wallet {
   return wallet !== null && wallet.mode !== "manual";
 }
 
+/**
+ * Numbers are for paying customers: free trial credits can't buy one, so buying needs a paid plan.
+ * Trial and purchased credits share one balance, so the plan is what tells them apart. Manually
+ * billed workspaces settle up outside the app and always qualify.
+ */
+export function canBuyNumbers(wallet: Wallet | null): boolean {
+  return !chargesCredits(wallet) || (wallet.planId !== null && wallet.subscriptionStatus === "active");
+}
+
+/** Renewal keeps going while Stripe retries a failed plan payment; a cancelled plan stops it. */
+function keepsNumbers(wallet: Wallet | null): boolean {
+  return canBuyNumbers(wallet) || (wallet?.planId != null && wallet.subscriptionStatus === "past_due");
+}
+
+export const NEEDS_PLAN = "Phone numbers come with a paid plan. Start a plan on the Billing page, then buy your number.";
+
 /** Frees the number if another workspace started verifying it and never finished. */
 async function clearExpiredClaims(e164: string): Promise<void> {
   await sql`DELETE FROM phone_numbers WHERE e164 = ${e164} AND status = 'pending' AND verify_expires_at < now()`;
@@ -40,6 +56,7 @@ export async function purchaseNumber(tenantId: string, e164: string, agentId: st
   if (taken) return { ok: false, error: "That number is already in use here. Pick another." };
 
   const wallet = await walletFor(tenantId);
+  if (!canBuyNumbers(wallet)) return { ok: false, error: NEEDS_PLAN };
   const price = numberPrice(wallet?.brand ?? "default");
   const cost = toMilli(price.credits);
   if (chargesCredits(wallet) && total(wallet.balances) < cost) {
@@ -140,7 +157,8 @@ export async function removeNumber(tenantId: string, id: string): Promise<void> 
 
 /**
  * Monthly billing for bought numbers, run by the maintenance job: renews each number whose paid
- * period ended if the wallet can pay, marks it past due if not, and releases it after the grace period.
+ * period ended if the workspace still has its plan and the credits to pay, marks it past due if not,
+ * and releases it after the grace period.
  */
 export async function renewNumbers(): Promise<{ renewed: number; pastDue: number; released: number }> {
   const result = { renewed: 0, pastDue: 0, released: 0 };
@@ -152,7 +170,7 @@ export async function renewNumbers(): Promise<{ renewed: number; pastDue: number
       const wallet = await walletFor(n.tenant_id);
       const price = numberPrice(wallet?.brand ?? "default");
       const cost = toMilli(price.credits);
-      if (!chargesCredits(wallet) || total(wallet.balances) >= cost) {
+      if (keepsNumbers(wallet) && (!chargesCredits(wallet) || total(wallet.balances) >= cost)) {
         if (chargesCredits(wallet)) {
           // The ref is the period being paid for, so a rerun can't charge the same month twice.
           await applyEntry(

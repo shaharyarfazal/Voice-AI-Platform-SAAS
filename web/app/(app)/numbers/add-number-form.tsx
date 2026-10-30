@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { buy, searchAvailable, startVerify, verificationState } from "./actions";
 
@@ -14,9 +15,21 @@ function AgentSelect({ agents, id }: { agents: Agent[]; id: string }) {
   );
 }
 
-export function BuyNumber({ agents, price, countries }: { agents: Agent[]; price: { label: string; credits: number }; countries: readonly { code: string; label: string }[] }) {
+export function BuyNumber({ agents, price, countries, subscribed }: { agents: Agent[]; price: { label: string; credits: number }; countries: readonly { code: string; label: string }[]; subscribed: boolean }) {
   const [search, searchAction, searching] = useActionState(searchAvailable, undefined);
   const [bought, buyAction, buying] = useActionState(buy, undefined);
+  if (!subscribed) {
+    return (
+      <div className="card space-y-3">
+        <div className="font-medium">Get a new number</div>
+        <p className="text-sm text-muted">
+          Numbers come with a paid plan ({price.label} each, taken from your credits). Free trial credits can&apos;t be used for a number.
+          You can still connect a number you already have below.
+        </p>
+        <Link className="btn inline-flex" href="/billing#plans">Start a plan</Link>
+      </div>
+    );
+  }
   return (
     <div className="card space-y-4">
       <div>

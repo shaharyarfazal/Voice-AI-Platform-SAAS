@@ -1,7 +1,7 @@
 import { hasRole, requireSession } from "@/lib/auth";
 import { walletFor } from "@/lib/billing/wallet";
 import { sql } from "@/lib/db";
-import { numberPrice } from "@/lib/phone-numbers";
+import { canBuyNumbers, numberPrice } from "@/lib/phone-numbers";
 import { SELL_COUNTRIES, twilioStatus } from "@/lib/twilio";
 import { assignAgent, removeNumber } from "./actions";
 import { BuyNumber, ConnectOwnNumber } from "./add-number-form";
@@ -24,6 +24,7 @@ export default async function NumbersPage() {
   const twilio = twilioStatus();
   const admin = hasRole(session, "admin");
   const price = numberPrice(wallet?.brand ?? "default");
+  const subscribed = canBuyNumbers(wallet);
 
   return (
     <div className="space-y-6">
@@ -48,7 +49,7 @@ export default async function NumbersPage() {
                   <td className="font-mono">
                     {n.e164}
                     {n.status === "pending" && <span className="badge ml-2">Waiting for verification</span>}
-                    {n.status === "past_due" && <span className="badge ml-2 text-critical">Payment due: add credits to keep it</span>}
+                    {n.status === "past_due" && <span className="badge ml-2 text-critical">{subscribed ? "Payment due: add credits to keep it" : "Payment due: start a plan to keep it"}</span>}
                   </td>
                   <td className="text-sm">
                     {n.source === "platform" ? `Bought here · ${price.label}${n.paid_until ? ` · renews ${n.paid_until.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : ""}` : `Your number · ${CARRIERS[n.carrier] ?? n.carrier}`}
@@ -85,7 +86,7 @@ export default async function NumbersPage() {
         <p className="text-sm text-muted">Ask a workspace admin to add phone numbers.</p>
       ) : (
         <>
-          {twilio.sell && <BuyNumber agents={agents} price={price} countries={SELL_COUNTRIES} />}
+          {twilio.sell && <BuyNumber agents={agents} price={price} countries={SELL_COUNTRIES} subscribed={subscribed} />}
           {twilio.verify ? (
             <ConnectOwnNumber agents={agents} sipHost={process.env.SIP_INBOUND_HOST || null} />
           ) : (
