@@ -46,6 +46,8 @@ if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
   for p in udp tcp; do
     ufw --force delete allow "$PORT/$p" >/dev/null 2>&1 || true
     ufw --force delete allow "$PORT" >/dev/null 2>&1 || true
+    # A blanket deny without a protocol would sit above the allows below and block the carriers too.
+    ufw --force delete deny "$PORT" >/dev/null 2>&1 || true
     ufw --force delete deny "$PORT/$p" >/dev/null 2>&1 || true  # re-added last, after the allows
     for ip in "${v4[@]}" "${v6[@]}"; do ufw allow proto "$p" from "$ip" to any port "$PORT" >/dev/null; done
     ufw deny "$PORT/$p" >/dev/null
